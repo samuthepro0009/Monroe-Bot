@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: monroe-discord-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    plan: free
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    healthCheckPath: /health
+    numInstances: 1
+    region: oregon
+    maxMemoryGB: 0.5
+    autoDeploy: false
