@@ -1,165 +1,47 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Monroe Bot - Complete Discord Bot with Dashboard API Integration
-"""
-
 import discord
 from discord.ext import commands
-import asyncio
-import logging
 import os
 import json
 from datetime import datetime
 from aiohttp import web
+import asyncio
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-# Configuration
-TOKEN = os.getenv('DISCORD_TOKEN')
-API_SECRET = os.getenv('API_SECRET', 'default-secret')
-
-if not TOKEN:
-    logger.error("DISCORD_TOKEN environment variable is required!")
-    exit(1)
-
-# Set up bot intents
+# Bot setup
 intents = discord.Intents.default()
 intents.message_content = True
-intents.guilds = True
 intents.members = True
+bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Create bot instance (NO PREFIX)
-bot = commands.Bot(
-    command_prefix='!',
-    intents=intents,
-    description="Monroe Bot - Discord Administration Bot with Web Dashboard"
-)
-
-# Bot startup time for uptime tracking
-bot.start_time = None
+API_SECRET = os.getenv('API_SECRET', 'default-secret')
 
 @bot.event
 async def on_ready():
-    """Event triggered when bot is ready"""
+    print(f'{bot.user} has connected to Discord!')
     bot.start_time = datetime.utcnow()
-    logger.info(f'{bot.user} has connected to Discord!')
-    logger.info(f'Bot ID: {bot.user.id}')
-    logger.info(f'Connected to {len(bot.guilds)} guilds')
 
-    # Set bot status
-    activity = discord.Activity(type=discord.ActivityType.watching, name="Monroe Social Club")
-    await bot.change_presence(activity=activity, status=discord.Status.online)
+    # Start the API server
+    await start_health_server()
 
-    # Start API server
-    asyncio.create_task(start_api_server())
+async def start_health_server():
+    """Complete API server with all endpoints for Monroe Dashboard"""
 
-@bot.event
-async def on_guild_join(guild):
-    """Event when bot joins a new guild"""
-    logger.info(f'Joined new guild: {guild.name} (ID: {guild.id})')
-
-@bot.event
-async def on_guild_remove(guild):
-    """Event when bot leaves a guild"""
-    logger.info(f'Left guild: {guild.name} (ID: {guild.id})')
-
-@bot.event
-async def on_command_error(ctx, error):
-    """Global error handler"""
-    if isinstance(error, commands.CommandNotFound):
-        return
-    elif isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ You don't have permission to use this command!")
-    elif isinstance(error, commands.BotMissingPermissions):
-        await ctx.send("❌ I don't have the required permissions to execute this command!")
-    elif isinstance(error, commands.MemberNotFound):
-        await ctx.send("❌ Member not found!")
-    else:
-        logger.error(f'Command error in {ctx.command}: {error}')
-        await ctx.send("❌ An error occurred while processing the command.")
-
-# Basic Commands
-@bot.command(name='ping')
-async def ping(ctx):
-    """Check bot latency"""
-    latency = round(bot.latency * 1000)
-    embed = discord.Embed(
-        title="🏓 Pong!",
-        description=f"Bot latency: {latency}ms",
-        color=0x7c3aed
-    )
-    await ctx.send(embed=embed)
-
-@bot.command(name='info')
-async def info(ctx):
-    """Bot information"""
-    uptime_seconds = (datetime.utcnow() - bot.start_time).total_seconds() if bot.start_time else 0
-    uptime_display = f"{int(uptime_seconds // 3600)}h {int((uptime_seconds % 3600) // 60)}m"
-
-    embed = discord.Embed(
-        title="🤖 Monroe Bot Info",
-        description="Discord Administration Bot with Web Dashboard",
-        color=0x7c3aed,
-        timestamp=datetime.utcnow()
-    )
-    embed.add_field(name="📊 Servers", value=len(bot.guilds), inline=True)
-    embed.add_field(name="👥 Users", value=sum(g.member_count or 0 for g in bot.guilds), inline=True)
-    embed.add_field(name="⏱️ Uptime", value=uptime_display, inline=True)
-    embed.add_field(name="🏓 Latency", value=f"{round(bot.latency * 1000)}ms", inline=True)
-    embed.set_footer(text="Monroe Social Club", icon_url=bot.user.avatar.url if bot.user.avatar else None)
-    await ctx.send(embed=embed)
-
-# Moderation Commands
-@bot.command(name='warn')
-@commands.has_permissions(kick_members=True)
-async def warn(ctx, member: discord.Member, *, reason="No reason provided"):
-    """Warn a member"""
-    try:
-        embed = discord.Embed(
-            title="⚠️ Warning",
-            description=f"You were warned in {ctx.guild.name}",
-            color=0xfbbf24,
-            timestamp=datetime.utcnow()
-        )
-        embed.add_field(name="Reason", value=reason, inline=False)
-        embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
-
-        await member.send(embed=embed)
-
-        log_embed = discord.Embed(
-            title="✅ Warning Issued",
-            description=f"{member.mention} has been warned",
-            color=0x10b981
-        )
-        log_embed.add_field(name="Reason", value=reason, inline=False)
-        log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
-        await ctx.send(embed=log_embed)
-
-    except discord.Forbidden:
-        await ctx.send(f"✅ {member.mention} has been warned (couldn't send DM)")
-
-# API Server for Dashboard Integration
-async def start_api_server():
-    """Start the API server for dashboard integration"""
-
-    def check_auth(request):
-        """Simple authentication check"""
+    async def check_auth(request):
         auth = request.headers.get('Authorization', '')
-        expected_token = f"Bearer {API_SECRET}"
-        return auth == expected_token
+        if not auth.startswith('Bearer ') or auth[7:] != API_SECRET:
+            return web.json_response({'error': 'Unauthorized'}, status=401)
+        return None
+
+    async def handle_health(request):
+        return web.Response(text="Bot is running!")
 
     async def handle_status(request):
-        """Bot status endpoint"""
-        if not check_auth(request):
-            return web.json_response({'error': 'Unauthorized'}, status=401)
+        auth_error = await check_auth(request)
+        if auth_error: return auth_error
 
         try:
-            guild_count = len(bot.guilds)
-            member_count = sum(g.member_count or 0 for g in bot.guilds)
-            uptime_seconds = (datetime.utcnow() - bot.start_time).total_seconds() if bot.start_time else 0
+            guild_count = len(bot.guilds) if hasattr(bot, 'guilds') else 0
+            member_count = sum(g.member_count or 0 for g in bot.guilds) if hasattr(bot, 'guilds') else 0
+            uptime_seconds = (datetime.utcnow() - bot.start_time).total_seconds() if hasattr(bot, 'start_time') else 0
             uptime_display = f"{int(uptime_seconds // 3600)}h {int((uptime_seconds % 3600) // 60)}m"
 
             return web.json_response({
@@ -170,47 +52,83 @@ async def start_api_server():
                 "lastSeen": datetime.utcnow().isoformat()
             })
         except Exception as e:
-            logger.error(f"Status endpoint error: {e}")
             return web.json_response({
-                "online": False,
-                "serverCount": 0,
-                "userCount": 0,
-                "uptime": "Error",
+                "online": False, 
+                "serverCount": 0, 
+                "userCount": 0, 
+                "uptime": "Error", 
                 "lastSeen": datetime.utcnow().isoformat()
             })
 
     async def handle_broadcast(request):
-        """Broadcast message endpoint"""
-        if not check_auth(request):
-            return web.json_response({'error': 'Unauthorized'}, status=401)
+        auth_error = await check_auth(request)
+        if auth_error: return auth_error
 
         try:
             data = await request.json()
-            message = data.get('message', '').strip()
-
+            message = data.get('message', '')
             if not message:
                 return web.json_response({'error': 'Message required'}, status=400)
 
             sent_count = 0
-            failed_count = 0
+            for guild in bot.guilds:
+                try:
+                    channel = None
+                    for ch in guild.text_channels:
+                        if ch.permissions_for(guild.me).send_messages:
+                            channel = ch
+                            break
+                    if channel:
+                        embed = discord.Embed(
+                            title="📢 Monroe Bot Broadcast", 
+                            description=message, 
+                            color=0x7c3aed, 
+                            timestamp=datetime.utcnow()
+                        )
+                        embed.set_footer(text="Sent from Monroe Dashboard")
+                        await channel.send(embed=embed)
+                        sent_count += 1
+                except:
+                    pass
 
+            return web.json_response({
+                'success': True, 
+                'sent_to': sent_count, 
+                'message': f'Broadcast sent to {sent_count} servers'
+            })
+        except Exception as e:
+            return web.json_response({'error': str(e)}, status=500)
+
+    async def handle_qotd(request):
+        auth_error = await check_auth(request)
+        if auth_error: return auth_error
+
+        try:
+            data = await request.json()
+            question = data.get('question', '')
+            if not question:
+                return web.json_response({'error': 'Question required'}, status=400)
+
+            sent_count = 0
             embed = discord.Embed(
-                title="📢 Monroe Bot Broadcast",
-                description=message,
-                color=0x7c3aed,
+                title=f"🤔 Question of the Day - {bot_config['qotd_message_style']}", 
+                description=question, 
+                color=bot_config['qotd_embed_color'], 
                 timestamp=datetime.utcnow()
             )
-            embed.set_footer(text="Sent from Monroe Dashboard")
+            embed.set_footer(text="Answer below! 🏖️")
             embed.set_author(name="Monroe Social Club")
 
             for guild in bot.guilds:
                 try:
                     channel = None
-                    for ch_name in ['general', 'announcements', 'chat', 'main']:
+                    # Look for configured QOTD channels first
+                    for ch_name in bot_config['qotd_channels']:
                         channel = discord.utils.get(guild.text_channels, name=ch_name)
                         if channel and channel.permissions_for(guild.me).send_messages:
                             break
 
+                    # Fallback to any channel we can send to
                     if not channel:
                         for ch in guild.text_channels:
                             if ch.permissions_for(guild.me).send_messages:
@@ -220,123 +138,48 @@ async def start_api_server():
                     if channel:
                         await channel.send(embed=embed)
                         sent_count += 1
-                        logger.info(f"Broadcast sent to {guild.name} (#{channel.name})")
-                    else:
-                        failed_count += 1
-
-                except Exception as e:
-                    failed_count += 1
-                    logger.error(f"Failed to send broadcast to {guild.name}: {e}")
+                except:
+                    pass
 
             return web.json_response({
-                'success': True,
-                'sent_to': sent_count,
-                'failed': failed_count,
-                'message': f'Broadcast sent to {sent_count} servers'
-            })
-
-        except Exception as e:
-            logger.error(f"Broadcast endpoint error: {e}")
-            return web.json_response({'error': str(e)}, status=500)
-
-    async def handle_qotd(request):
-        """Question of the Day endpoint"""
-        if not check_auth(request):
-            return web.json_response({'error': 'Unauthorized'}, status=401)
-
-        try:
-            data = await request.json()
-            question = data.get('question', '').strip()
-            category = data.get('category', 'General')
-
-            if not question:
-                return web.json_response({'error': 'Question required'}, status=400)
-
-            sent_count = 0
-            failed_count = 0
-
-            embed = discord.Embed(
-                title=f"🤔 Question of the Day - {category}",
-                description=question,
-                color=0xf59e0b,
-                timestamp=datetime.utcnow()
-            )
-            embed.set_footer(text="Answer in the comments below!")
-            embed.set_author(name="Monroe Social Club")
-
-            for guild in bot.guilds:
-                try:
-                    channel = None
-                    for ch_name in ['qotd', 'question-of-the-day', 'daily-question', 'general', 'chat']:
-                        channel = discord.utils.get(guild.text_channels, name=ch_name)
-                        if channel and channel.permissions_for(guild.me).send_messages:
-                            break
-
-                    if not channel:
-                        for ch in guild.text_channels:
-                            if ch.permissions_for(guild.me).send_messages:
-                                channel = ch
-                                break
-
-                    if channel:
-                        message = await channel.send(embed=embed)
-                        try:
-                            await message.add_reaction('🤔')
-                        except:
-                            pass
-                        sent_count += 1
-                        logger.info(f"QOTD sent to {guild.name} (#{channel.name})")
-                    else:
-                        failed_count += 1
-
-                except Exception as e:
-                    failed_count += 1
-                    logger.error(f"Failed to send QOTD to {guild.name}: {e}")
-
-            return web.json_response({
-                'success': True,
-                'sent_to': sent_count,
-                'failed': failed_count,
+                'success': True, 
+                'sent_to': sent_count, 
                 'message': f'QOTD sent to {sent_count} servers'
             })
-
         except Exception as e:
-            logger.error(f"QOTD endpoint error: {e}")
             return web.json_response({'error': str(e)}, status=500)
 
     async def handle_announcement(request):
-        """Announcement endpoint"""
-        if not check_auth(request):
-            return web.json_response({'error': 'Unauthorized'}, status=401)
+        auth_error = await check_auth(request)
+        if auth_error: return auth_error
 
         try:
             data = await request.json()
-            title = data.get('title', '').strip()
-            content = data.get('content', '').strip()
-
+            title = data.get('title', '')
+            content = data.get('content', '')
             if not title or not content:
                 return web.json_response({'error': 'Title and content required'}, status=400)
 
             sent_count = 0
-            failed_count = 0
-
             embed = discord.Embed(
-                title=f"📢 {title}",
-                description=content,
-                color=0x7c3aed,
+                title=f"📢 {title}", 
+                description=content, 
+                color=bot_config['announcement_embed_color'], 
                 timestamp=datetime.utcnow()
             )
-            embed.set_author(name="Monroe Social Club")
+            embed.set_author(name=f"Monroe Social Club - {bot_config['announcement_style']}")
             embed.set_footer(text="Official Monroe Announcement")
 
             for guild in bot.guilds:
                 try:
                     channel = None
-                    for ch_name in ['announcements', 'news', 'updates', 'general', 'main']:
+                    # Look for configured announcement channels first
+                    for ch_name in bot_config['announcement_channels']:
                         channel = discord.utils.get(guild.text_channels, name=ch_name)
                         if channel and channel.permissions_for(guild.me).send_messages:
-                            break
+                            break</old_str>
 
+                    # Fallback to any channel we can send to
                     if not channel:
                         for ch in guild.text_channels:
                             if ch.permissions_for(guild.me).send_messages:
@@ -346,106 +189,61 @@ async def start_api_server():
                     if channel:
                         await channel.send(embed=embed)
                         sent_count += 1
-                        logger.info(f"Announcement sent to {guild.name} (#{channel.name})")
-                    else:
-                        failed_count += 1
-
-                except Exception as e:
-                    failed_count += 1
-                    logger.error(f"Failed to send announcement to {guild.name}: {e}")
+                except:
+                    pass
 
             return web.json_response({
-                'success': True,
-                'sent_to': sent_count,
-                'failed': failed_count,
+                'success': True, 
+                'sent_to': sent_count, 
                 'message': f'Announcement sent to {sent_count} servers'
             })
-
         except Exception as e:
-            logger.error(f"Announcement endpoint error: {e}")
             return web.json_response({'error': str(e)}, status=500)
 
-    async def handle_moderation(request):
-        """Moderation endpoint"""
-        if not check_auth(request):
-            return web.json_response({'error': 'Unauthorized'}, status=401)
+    # Configuration storage
+    bot_config = {
+        "qotd_channels": ["qotd", "question-of-the-day", "daily-question", "general", "chat"],
+        "announcement_channels": ["announcements", "news", "updates", "general"],
+        "qotd_message_style": "80s Beach Vibes",
+        "announcement_style": "Official Monroe",
+        "qotd_embed_color": 0xf59e0b,
+        "announcement_embed_color": 0x7c3aed
+    }
 
+    async def handle_config_get(request):
+        auth_error = await check_auth(request)
+        if auth_error: return auth_error
+        return web.json_response(bot_config)
+
+    async def handle_config_post(request):
+        auth_error = await check_auth(request)
+        if auth_error: return auth_error
+        
         try:
             data = await request.json()
-            action = data.get('action', '').lower()
-            user_id = data.get('user_id', '')
-            reason = data.get('reason', 'No reason provided')
-
-            if not action or not user_id:
-                return web.json_response({'error': 'Action and user_id required'}, status=400)
-
-            if action not in ['warn', 'kick', 'ban']:
-                return web.json_response({'error': 'Invalid action'}, status=400)
-
-            guild = bot.guilds[0] if bot.guilds else None
-            if not guild:
-                return web.json_response({'error': 'No guild available'}, status=404)
-
-            try:
-                member = await guild.fetch_member(int(user_id))
-            except:
-                return web.json_response({'error': 'User not found'}, status=404)
-
-            result = ""
-
-            if action == 'warn':
-                try:
-                    embed = discord.Embed(
-                        title="⚠️ Warning",
-                        description=f"You were warned in {guild.name}",
-                        color=0xfbbf24,
-                        timestamp=datetime.utcnow()
-                    )
-                    embed.add_field(name="Reason", value=reason, inline=False)
-
-                    await member.send(embed=embed)
-                    result = f"Warning sent to {member.display_name}"
-                except:
-                    result = f"Warning issued to {member.display_name} (DM failed)"
-
-            elif action == 'kick':
-                try:
-                    await member.kick(reason=f"Dashboard moderation: {reason}")
-                    result = f"Kicked {member.display_name}"
-                except discord.Forbidden:
-                    return web.json_response({'error': 'Insufficient permissions'}, status=403)
-
-            elif action == 'ban':
-                try:
-                    await member.ban(reason=f"Dashboard moderation: {reason}")
-                    result = f"Banned {member.display_name}"
-                except discord.Forbidden:
-                    return web.json_response({'error': 'Insufficient permissions'}, status=403)
-
-            return web.json_response({
-                'success': True,
-                'message': result,
-                'action': action,
-                'user': member.display_name
-            })
-
+            if 'qotd_channels' in data:
+                bot_config['qotd_channels'] = data['qotd_channels']
+            if 'announcement_channels' in data:
+                bot_config['announcement_channels'] = data['announcement_channels']
+            if 'qotd_message_style' in data:
+                bot_config['qotd_message_style'] = data['qotd_message_style']
+            if 'announcement_style' in data:
+                bot_config['announcement_style'] = data['announcement_style']
+            
+            return web.json_response({'success': True, 'config': bot_config})
         except Exception as e:
-            logger.error(f"Moderation endpoint error: {e}")
             return web.json_response({'error': str(e)}, status=500)
 
-    # Create web application
+    # Create web app with all endpoints
     app = web.Application()
-
-    # Health endpoint (no auth required)
-    app.router.add_get('/health', lambda req: web.Response(text="Bot is running!"))
+    app.router.add_get('/health', handle_health)
     app.router.add_get('/', lambda req: web.Response(text="Monroe Bot API Server"))
-
-    # API endpoints (auth required)
     app.router.add_get('/api/status', handle_status)
     app.router.add_post('/api/broadcast', handle_broadcast)
     app.router.add_post('/api/qotd', handle_qotd)
     app.router.add_post('/api/announcement', handle_announcement)
-    app.router.add_post('/api/moderation', handle_moderation)
+    app.router.add_get('/api/config', handle_config_get)
+    app.router.add_post('/api/config', handle_config_post)
 
     # Start server
     port = int(os.getenv('PORT', 8000))
@@ -453,16 +251,14 @@ async def start_api_server():
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
+    print(f"Monroe Bot API server started on port {port}")
+    print("API endpoints ready - dashboard commands should work now!")
 
-    logger.info(f"Monroe Bot API server started on port {port}")
-    logger.info("API endpoints ready - dashboard commands should work now!")
+# Add your existing bot commands here
+@bot.command(name='ping')
+async def ping(ctx):
+    await ctx.send('Pong!')
 
-# Main execution
+# Run the bot
 if __name__ == "__main__":
-    try:
-        logger.info("Starting Monroe Bot...")
-        bot.run(TOKEN)
-    except KeyboardInterrupt:
-        logger.info("Bot stopped by user")
-    except Exception as e:
-        logger.error(f"Fatal error: {e}")
+    bot.run(os.getenv('DISCORD_TOKEN'))
