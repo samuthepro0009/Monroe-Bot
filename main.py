@@ -1,3 +1,4 @@
+
 import discord
 from discord.ext import commands
 import os
@@ -177,7 +178,7 @@ async def start_health_server():
                     for ch_name in bot_config['announcement_channels']:
                         channel = discord.utils.get(guild.text_channels, name=ch_name)
                         if channel and channel.permissions_for(guild.me).send_messages:
-                            break</old_str>
+                            break
 
                     # Fallback to any channel we can send to
                     if not channel:
