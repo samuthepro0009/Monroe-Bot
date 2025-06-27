@@ -477,9 +477,16 @@ async def start_health_server():
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
-    print(f"✅ API server started on port {port} with dashboard endpoints")
+    print(f"🌐 Monroe Bot API server listening on 0.0.0.0:{port}")
+    print(f"✅ API endpoints ready:")
+    print(f"   - Health check: http://0.0.0.0:{port}/health")
+    print(f"   - Bot status: http://0.0.0.0:{port}/api/status")
+    print(f"   - Dashboard API ready for external connections")
 
 async def main():
+    print("🌴 Monroe Social Club Bot - Starting initialization...")
+    print("=" * 50)
+    
     # Load cogs first
     cogs = [
         "bot.moderation",
@@ -494,29 +501,42 @@ async def main():
         "bot.custom_embeds"
     ]
     
+    print(f"📦 Loading {len(cogs)} extensions...")
+    loaded_cogs = 0
     for cog in cogs:
         try:
             await bot.load_extension(cog)
-            print(f"✅ Loaded {cog}")
+            print(f"✅ Loaded extension: {cog}")
+            loaded_cogs += 1
         except Exception as e:
             print(f"❌ Failed to load {cog}: {e}")
     
+    print(f"📊 Extensions loaded: {loaded_cogs}/{len(cogs)}")
+    print("=" * 50)
+    
     # Setup hook with health server and command sync
     async def setup_hook():
+        print("🚀 Starting Monroe Bot setup...")
+        
         # Start health check server for Render
+        print("🌐 Initializing API server...")
         await start_health_server()
         
-        print("🔄 Setting up commands...")
+        print("🔄 Setting up slash commands...")
         try:
             # Sync commands immediately after setup
             synced = await bot.tree.sync()
-            print(f"✨ Synced {len(synced)} commands during setup")
+            print(f"✨ Successfully synced {len(synced)} slash commands")
         except Exception as e:
-            print(f"Setup sync failed: {e}")
+            print(f"⚠️ Command sync failed: {e}")
+        
+        print("✅ Bot setup completed successfully!")
+        print("🎉 Monroe Bot is now ready to serve!")
     
     bot.setup_hook = setup_hook
     
     # Start the bot
+    print("🔌 Connecting to Discord...")
     await bot.start(Config.BOT_TOKEN)
 
 if __name__ == "__main__":
