@@ -15,6 +15,10 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 API_SECRET = os.getenv('API_SECRET', 'default-secret')
 
+# Channel IDs
+ANNOUNCEMENT_CHANNEL_ID = 1353388424295350283
+BROADCAST_CHANNELS = [1353393437650718910, 1353395315197218847]
+
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
@@ -68,34 +72,33 @@ async def start_health_server():
         try:
             data = await request.json()
             message = data.get('message', '')
+            dashboard_user = data.get('dashboard_user', 'Dashboard Admin')
             if not message:
                 return web.json_response({'error': 'Message required'}, status=400)
 
             sent_count = 0
             for guild in bot.guilds:
                 try:
-                    channel = None
-                    for ch in guild.text_channels:
-                        if ch.permissions_for(guild.me).send_messages:
-                            channel = ch
-                            break
-                    if channel:
-                        embed = discord.Embed(
-                            title="📢 Monroe Bot Broadcast", 
-                            description=message, 
-                            color=0x7c3aed, 
-                            timestamp=datetime.utcnow()
-                        )
-                        embed.set_footer(text="Sent from Monroe Dashboard")
-                        await channel.send(embed=embed)
-                        sent_count += 1
+                    for channel_id in BROADCAST_CHANNELS:
+                        channel = bot.get_channel(channel_id)
+                        if channel and channel.guild == guild and channel.permissions_for(guild.me).send_messages:
+                            embed = discord.Embed(
+                                title="📢 Monroe Bot Broadcast", 
+                                description=message, 
+                                color=0x7c3aed, 
+                                timestamp=datetime.utcnow()
+                            )
+                            embed.set_author(name=f"Sent by {dashboard_user}")
+                            embed.set_footer(text="Sent from Monroe Dashboard")
+                            await channel.send(content="@everyone", embed=embed)
+                            sent_count += 1
                 except:
                     pass
 
             return web.json_response({
                 'success': True, 
                 'sent_to': sent_count, 
-                'message': f'Broadcast sent to {sent_count} servers'
+                'message': f'Broadcast sent to {sent_count} channels'
             })
         except Exception as e:
             return web.json_response({'error': str(e)}, status=500)
@@ -107,6 +110,7 @@ async def start_health_server():
         try:
             data = await request.json()
             question = data.get('question', '')
+            dashboard_user = data.get('dashboard_user', 'Dashboard Admin')
             if not question:
                 return web.json_response({'error': 'Question required'}, status=400)
 
@@ -118,7 +122,7 @@ async def start_health_server():
                 timestamp=datetime.utcnow()
             )
             embed.set_footer(text="Answer below! 🏖️")
-            embed.set_author(name="Monroe Social Club")
+            embed.set_author(name=f"Sent by {dashboard_user}")
 
             for guild in bot.guilds:
                 try:
@@ -137,7 +141,7 @@ async def start_health_server():
                                 break
 
                     if channel:
-                        await channel.send(embed=embed)
+                        await channel.send(content="@everyone", embed=embed)
                         sent_count += 1
                 except:
                     pass
@@ -158,6 +162,7 @@ async def start_health_server():
             data = await request.json()
             title = data.get('title', '')
             content = data.get('content', '')
+            dashboard_user = data.get('dashboard_user', 'Dashboard Admin')
             if not title or not content:
                 return web.json_response({'error': 'Title and content required'}, status=400)
 
@@ -168,27 +173,14 @@ async def start_health_server():
                 color=bot_config['announcement_embed_color'], 
                 timestamp=datetime.utcnow()
             )
-            embed.set_author(name=f"Monroe Social Club - {bot_config['announcement_style']}")
+            embed.set_author(name=f"Sent by {dashboard_user}")
             embed.set_footer(text="Official Monroe Announcement")
 
             for guild in bot.guilds:
                 try:
-                    channel = None
-                    # Look for configured announcement channels first
-                    for ch_name in bot_config['announcement_channels']:
-                        channel = discord.utils.get(guild.text_channels, name=ch_name)
-                        if channel and channel.permissions_for(guild.me).send_messages:
-                            break
-
-                    # Fallback to any channel we can send to
-                    if not channel:
-                        for ch in guild.text_channels:
-                            if ch.permissions_for(guild.me).send_messages:
-                                channel = ch
-                                break
-
-                    if channel:
-                        await channel.send(embed=embed)
+                    channel = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+                    if channel and channel.guild == guild and channel.permissions_for(guild.me).send_messages:
+                        await channel.send(content="@everyone", embed=embed)
                         sent_count += 1
                 except:
                     pass
@@ -245,6 +237,148 @@ async def start_health_server():
     app.router.add_post('/api/announcement', handle_announcement)
     app.router.add_get('/api/config', handle_config_get)
     app.router.add_post('/api/config', handle_config_post)
+
+    async def handle_moderation(request):
+        """Complete moderation endpoint with full rule system"""
+        auth_error = await check_auth(request)
+        if auth_error: return auth_error
+        
+        try:
+            data = await request.json()
+            action = data.get('action', '').lower()
+            user_id = data.get('user_id', '')
+            reason = data.get('reason', 'No reason provided')
+            rule_violations = data.get('rule_violations', [])
+            delete_days = data.get('delete_days', 0)
+            dashboard_user = data.get('dashboard_user', 'Dashboard Admin')
+            
+            if not action or not user_id:
+                return web.json_response({'error': 'Action and user_id required'}, status=400)
+            
+            if action not in ['warn', 'kick', 'ban']:
+                return web.json_response({'error': 'Invalid action. Must be warn, kick, or ban'}, status=400)
+            
+            # Use first available guild
+            guild = bot.guilds[0] if bot.guilds else None
+            if not guild:
+                return web.json_response({'error': 'No guild available'}, status=404)
+            
+            # Get member
+            try:
+                member = await guild.fetch_member(int(user_id))
+            except:
+                return web.json_response({'error': 'User not found in guild'}, status=404)
+            
+            # Check bot permissions
+            bot_member = guild.get_member(bot.user.id)
+            if not bot_member:
+                return web.json_response({'error': 'Bot not found in guild'}, status=500)
+            
+            # Execute moderation action
+            result = ""
+            
+            if action == 'warn':
+                try:
+                    embed = discord.Embed(
+                        title="⚠️ Warning",
+                        description=f"You have been warned in {guild.name}",
+                        color=0xfbbf24,
+                        timestamp=datetime.utcnow()
+                    )
+                    embed.add_field(name="Reason", value=reason, inline=False)
+                    if rule_violations:
+                        embed.add_field(name="Rule Violations", value="\n".join(rule_violations), inline=False)
+                    embed.add_field(name="Moderator", value=dashboard_user, inline=True)
+                    embed.set_footer(text="Monroe Social Club Moderation")
+                    
+                    await member.send(embed=embed)
+                    result = f"Warning sent to {member.display_name}"
+                except discord.Forbidden:
+                    result = f"Warning issued to {member.display_name} (DM failed - user has DMs disabled)"
+                except Exception as e:
+                    result = f"Warning issued to {member.display_name} (DM failed - {str(e)})"
+                    
+            elif action == 'kick':
+                if not bot_member.guild_permissions.kick_members:
+                    return web.json_response({'error': 'Bot lacks kick permissions'}, status=403)
+                
+                try:
+                    # Send DM before kicking
+                    embed = discord.Embed(
+                        title="👢 Kicked from Server",
+                        description=f"You have been kicked from {guild.name}",
+                        color=0xf97316,
+                        timestamp=datetime.utcnow()
+                    )
+                    embed.add_field(name="Reason", value=reason, inline=False)
+                    if rule_violations:
+                        embed.add_field(name="Rule Violations", value="\n".join(rule_violations), inline=False)
+                    embed.add_field(name="Moderator", value=dashboard_user, inline=True)
+                    embed.set_footer(text="Monroe Social Club Moderation")
+                    
+                    try:
+                        await member.send(embed=embed)
+                    except:
+                        pass  # Ignore if DM fails
+                    
+                    await member.kick(reason=f"Dashboard moderation by {dashboard_user}: {reason}")
+                    result = f"Successfully kicked {member.display_name} from {guild.name}"
+                except discord.Forbidden:
+                    return web.json_response({'error': 'Insufficient permissions to kick this user'}, status=403)
+                except Exception as e:
+                    return web.json_response({'error': f'Failed to kick user: {str(e)}'}, status=500)
+                    
+            elif action == 'ban':
+                if not bot_member.guild_permissions.ban_members:
+                    return web.json_response({'error': 'Bot lacks ban permissions'}, status=403)
+                
+                try:
+                    # Send DM before banning
+                    embed = discord.Embed(
+                        title="🔨 Banned from Server",
+                        description=f"You have been banned from {guild.name}",
+                        color=0xef4444,
+                        timestamp=datetime.utcnow()
+                    )
+                    embed.add_field(name="Reason", value=reason, inline=False)
+                    if rule_violations:
+                        embed.add_field(name="Rule Violations", value="\n".join(rule_violations), inline=False)
+                    embed.add_field(name="Moderator", value=dashboard_user, inline=True)
+                    embed.set_footer(text="Monroe Social Club Moderation")
+                    
+                    try:
+                        await member.send(embed=embed)
+                    except:
+                        pass  # Ignore if DM fails
+                    
+                    await member.ban(
+                        reason=f"Dashboard moderation by {dashboard_user}: {reason}", 
+                        delete_message_days=min(delete_days, 7)  # Discord limit
+                    )
+                    result = f"Successfully banned {member.display_name} from {guild.name}"
+                except discord.Forbidden:
+                    return web.json_response({'error': 'Insufficient permissions to ban this user'}, status=403)
+                except Exception as e:
+                    return web.json_response({'error': f'Failed to ban user: {str(e)}'}, status=500)
+            
+            print(f"Moderation action executed: {action} on {member.display_name} in {guild.name} by {dashboard_user}")
+            
+            return web.json_response({
+                'success': True,
+                'message': result,
+                'action': action,
+                'user': member.display_name,
+                'user_id': str(member.id),
+                'guild': guild.name,
+                'reason': reason,
+                'moderator': dashboard_user
+            })
+            
+        except Exception as e:
+            print(f"Moderation endpoint error: {str(e)}")
+            return web.json_response({'error': f'Internal server error: {str(e)}'}, status=500)
+
+    app.router.add_post('/api/moderation', handle_moderation)
 
     # Start server
     port = int(os.getenv('PORT', 8000))
