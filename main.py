@@ -31,7 +31,10 @@ async def load_cogs():
         'bot.admin_logging', 
         'bot.moderation',
         'bot.utils',
-        'bot.suspicious_activity'  # Add our new suspicious activity system
+        'bot.suspicious_activity',
+        'bot.announcement_templates',
+        'bot.ascii_art',
+        'bot.activity_leaderboard'
     ]
     
     for cog in cogs:

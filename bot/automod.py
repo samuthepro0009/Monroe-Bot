@@ -15,6 +15,25 @@ class AutomodCog(commands.Cog):
         # Initialize profanity filter
         profanity.load_censor_words()
         
+        # Smart moderation patterns
+        self.spam_patterns = {
+            'excessive_caps': r'[A-Z]{10,}',
+            'excessive_punctuation': r'[!?]{5,}',
+            'repeated_chars': r'(.)\1{5,}',
+            'mass_mentions': r'<@[!&]?\d+>',
+            'suspicious_links': r'(discord\.gg|bit\.ly|tinyurl|t\.co)\/\w+',
+            'zalgo_text': r'[\u0300-\u036f\u1ab0-\u1aff\u1dc0-\u1dff\u20d0-\u20ff\ufe20-\ufe2f]',
+            'excessive_emojis': r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]{10,}'
+        }
+        
+        # Context-aware detection
+        self.context_keywords = {
+            'trading': ['trade', 'selling', 'buying', 'robux', 'limiteds', 'cheap', 'free robux'],
+            'scam': ['free', 'giveaway', 'winner', 'click here', 'dm me', 'trust trade'],
+            'advertising': ['join my', 'check out', 'subscribe', 'follow me', 'my channel', 'my server'],
+            'begging': ['please give', 'can i have', 'donate', 'gift me', 'spare robux']
+        }
+        
         # Extended bad words list including multiple languages and AI detection
         self.bad_words = [
             # English profanity
@@ -91,6 +110,66 @@ class AutomodCog(commands.Cog):
                 return True, word
         
         return False, None
+    
+    def detect_spam_patterns(self, text):
+        """Detect spam patterns in text"""
+        detected_patterns = []
+        
+        for pattern_name, pattern in self.spam_patterns.items():
+            if re.search(pattern, text):
+                detected_patterns.append(pattern_name)
+        
+        return detected_patterns
+    
+    def detect_context_violations(self, text):
+        """Detect context-based violations"""
+        text_lower = text.lower()
+        detected_contexts = []
+        
+        for context, keywords in self.context_keywords.items():
+            matches = sum(1 for keyword in keywords if keyword in text_lower)
+            if matches >= 2:  # Require at least 2 matching keywords
+                detected_contexts.append(context)
+        
+        return detected_contexts
+    
+    def calculate_message_score(self, message):
+        """Calculate a risk score for the message"""
+        score = 0
+        factors = []
+        
+        # Length factors
+        if len(message.content) > 1000:
+            score += 2
+            factors.append("very_long_message")
+        
+        # Mention factors
+        mention_count = len(message.mentions)
+        if mention_count > 5:
+            score += 3
+            factors.append("excessive_mentions")
+        elif mention_count > 2:
+            score += 1
+            factors.append("multiple_mentions")
+        
+        # Caps ratio
+        if message.content:
+            caps_ratio = sum(1 for c in message.content if c.isupper()) / len(message.content)
+            if caps_ratio > 0.7:
+                score += 2
+                factors.append("excessive_caps")
+        
+        # Spam patterns
+        spam_patterns = self.detect_spam_patterns(message.content)
+        score += len(spam_patterns)
+        factors.extend(spam_patterns)
+        
+        # Context violations
+        context_violations = self.detect_context_violations(message.content)
+        score += len(context_violations) * 2
+        factors.extend(context_violations)
+        
+        return score, factors
 
     def detect_language(self, text):
         """Detect the language of the text"""
