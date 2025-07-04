@@ -13,9 +13,9 @@ class CredentialsManager:
             "Samu": self._hash_password("NapoliEsplosa11"),  # Default admin
             
             # New credentials as requested
-            "AlexDeCeglie": self._hash_password("kitemmurtstravev"),
-            "poseidone": self._hash_password("dionettuno"),
-            "LUCA": self._hash_password("TETTECULO1")
+            "Rev": self._hash_password("kitemmurtstravev"),
+            "Royal": self._hash_password("dionettuno"),
+            "Luca": self._hash_password("TETTECULO1")
         }
     
     def _hash_password(self, password: str) -> str:
