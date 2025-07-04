@@ -8,6 +8,7 @@ from aiohttp_jinja2 import setup as jinja2_setup, template
 import aiohttp_jinja2
 import jinja2
 import asyncio
+from bot.credentials import credentials_manager
 
 # Bot setup
 intents = discord.Intents.default()
@@ -143,6 +144,31 @@ async def start_health_server():
         if not auth.startswith('Bearer ') or auth[7:] != API_SECRET:
             return web.json_response({'error': 'Unauthorized'}, status=401)
         return None
+
+    async def handle_login(request):
+        """Handle dashboard login with username/password"""
+        try:
+            data = await request.json()
+            username = data.get('username', '')
+            password = data.get('password', '')
+            
+            if not username or not password:
+                return web.json_response({'error': 'Username and password required'}, status=400)
+            
+            if credentials_manager.verify_credentials(username, password):
+                # In a real application, you'd generate a JWT token here
+                # For now, we'll return a simple success with the API secret
+                return web.json_response({
+                    'success': True,
+                    'message': 'Login successful',
+                    'token': API_SECRET,  # In production, generate unique tokens
+                    'username': username
+                })
+            else:
+                return web.json_response({'error': 'Invalid credentials'}, status=401)
+                
+        except Exception as e:
+            return web.json_response({'error': str(e)}, status=500)
 
     async def handle_health(request):
         return web.Response(text="Bot is running!")
@@ -405,8 +431,6 @@ async def start_health_server():
                                 print(f"Failed to send dashboard log to channel {log_channel.id}: {e}")
                     
                     log_result = f"logged to {logged_count} channels" if logged_count > 0 else "log failed"
-                    else:
-                        log_result = "log channel not found"
 
                     result = f"Warning issued to {member.display_name} ({dm_result}, {log_result})"
                 except Exception as e:
@@ -442,6 +466,7 @@ async def start_health_server():
     app.router.add_get('/', handle_index)
     app.router.add_get('/health', handle_health)
     app.router.add_get('/api/status', handle_status)
+    app.router.add_post('/api/login', handle_login)
     app.router.add_post('/api/broadcast', handle_broadcast)
     app.router.add_post('/api/qotd', handle_qotd)
     app.router.add_post('/api/announcement', handle_announcement)
