@@ -51,6 +51,13 @@ class RuleViolationSelect(discord.ui.Select):
             except discord.Forbidden:
                 await interaction.response.send_message("❌ I don't have permission to ban this user.", ephemeral=True)
                 return
+        elif self.action_type == "Kick":
+            color = Config.COLORS["error"]
+            try:
+                await self.target.kick(reason=f"Kicked by {self.staff_member} - {reason}")
+            except discord.Forbidden:
+                await interaction.response.send_message("❌ I don't have permission to kick this user.", ephemeral=True)
+                return
 
         # Create moderation embed
         embed = create_moderation_embed(
@@ -77,10 +84,16 @@ class RuleViolationSelect(discord.ui.Select):
                     description=f"You have been warned in Monroe Social Club.",
                     color=color
                 )
-            else:
+            elif self.action_type == "Ban":
                 dm_embed = discord.Embed(
                     title="🔨 Banned - Monroe Social Club",
                     description=f"You have been banned from Monroe Social Club.",
+                    color=color
+                )
+            elif self.action_type == "Kick":
+                dm_embed = discord.Embed(
+                    title="👢 Kicked - Monroe Social Club",
+                    description=f"You have been kicked from Monroe Social Club.",
                     color=color
                 )
 
@@ -133,6 +146,13 @@ class CustomReasonModal(discord.ui.Modal):
             except discord.Forbidden:
                 await interaction.response.send_message("❌ I don't have permission to ban this user.", ephemeral=True)
                 return
+        elif self.action_type == "Kick":
+            color = Config.COLORS["error"]
+            try:
+                await self.target.kick(reason=f"Kicked by {self.staff_member} - {reason}")
+            except discord.Forbidden:
+                await interaction.response.send_message("❌ I don't have permission to kick this user.", ephemeral=True)
+                return
 
         # Create moderation embed
         embed = create_moderation_embed(
@@ -159,10 +179,16 @@ class CustomReasonModal(discord.ui.Modal):
                     description=f"You have been warned in Monroe Social Club.",
                     color=color
                 )
-            else:
+            elif self.action_type == "Ban":
                 dm_embed = discord.Embed(
                     title="🔨 Banned - Monroe Social Club",
                     description=f"You have been banned from Monroe Social Club.",
+                    color=color
+                )
+            elif self.action_type == "Kick":
+                dm_embed = discord.Embed(
+                    title="👢 Kicked - Monroe Social Club",
+                    description=f"You have been kicked from Monroe Social Club.",
                     color=color
                 )
 
@@ -228,18 +254,18 @@ class ModerationCog(commands.Cog):
 
     async def cog_load(self):
         print(f"🛡️ ModerationCog loaded successfully")
-        
+
         # Debug: Print all app commands in this cog
         app_commands = getattr(self, '__cog_app_commands__', [])
         print(f"🛡️ ModerationCog has {len(app_commands)} app commands: {[cmd.name for cmd in app_commands]}")
-        
+
         # Verify warn command exists
         warn_cmd = None
         for cmd in app_commands:
             if cmd.name == 'warn':
                 warn_cmd = cmd
                 break
-                
+
         if warn_cmd:
             print(f"🛡️ Warn command found: {warn_cmd.name} - {warn_cmd.description}")
         else:
@@ -312,40 +338,9 @@ class ModerationCog(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
 
-            # Send DM to user
-            try:
-                dm_embed = discord.Embed(
-                    title="👢 Kicked - Monroe Social Club",
-                    description=f"You have been kicked from {interaction.guild.name}",
-                    color=Config.COLORS["error"],
-                    timestamp=datetime.datetime.utcnow()
-                )
-                dm_embed.add_field(name="Reason", value=reason, inline=False)
-                dm_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
-
-                await user.send(embed=dm_embed)
-            except Exception as e:
-                print(f"❌ Could not send DM to {user}: {e}")
-
-            # Kick the user
-            await user.kick(reason=f"Kicked by {interaction.user}: {reason}")
-
-            # Create moderation log
-            log_embed = create_moderation_embed(
-                action="Kick",
-                target=user,
-                staff_member=interaction.user,
-                reason=reason,
-                color=Config.COLORS["error"]
-            )
-
-            # Log to moderation log channel
-            log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
-            if log_channel:
-                await log_channel.send(embed=log_embed)
-
-            embed = create_success_embed("User Kicked", f"{user.mention} has been kicked for: {reason}")
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # Open the rule selection panel
+            view = RuleViolationView("Kick", user, interaction.user)
+            await interaction.response.send_message("Select the rules violated:", view=view, ephemeral=True)
 
         except Exception as e:
             print(f"❌ Error in kick command: {e}")
@@ -363,40 +358,9 @@ class ModerationCog(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
 
-            # Send DM to user
-            try:
-                dm_embed = discord.Embed(
-                    title="🔨 Banned - Monroe Social Club",
-                    description=f"You have been banned from {interaction.guild.name}",
-                    color=Config.COLORS["error"],
-                    timestamp=datetime.datetime.utcnow()
-                )
-                dm_embed.add_field(name="Reason", value=reason, inline=False)
-                dm_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
-
-                await user.send(embed=dm_embed)
-            except Exception as e:
-                print(f"❌ Could not send DM to {user}: {e}")
-
-            # Ban the user
-            await user.ban(reason=f"Banned by {interaction.user}: {reason}")
-
-            # Create moderation log
-            log_embed = create_moderation_embed(
-                action="Ban",
-                target=user,
-                staff_member=interaction.user,
-                reason=reason,
-                color=Config.COLORS["error"]
-            )
-
-            # Log to moderation log channel
-            log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
-            if log_channel:
-                await log_channel.send(embed=log_embed)
-
-            embed = create_success_embed("User Banned", f"{user.mention} has been banned for: {reason}")
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+             # Open the rule selection panel
+            view = RuleViolationView("Ban", user, interaction.user)
+            await interaction.response.send_message("Select the rules violated:", view=view, ephemeral=True)
 
         except Exception as e:
             print(f"❌ Error in ban command: {e}")
