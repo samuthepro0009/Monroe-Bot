@@ -45,8 +45,18 @@ async def load_cogs():
         try:
             await bot.load_extension(cog)
             print(f'✅ Loaded {cog}')
+            
+            # Check if moderation cog loaded correctly
+            if cog == 'bot.moderation':
+                moderation_cog = bot.get_cog('ModerationCog')
+                if moderation_cog:
+                    print(f'✅ Moderation cog loaded with commands: {[cmd.name for cmd in moderation_cog.get_app_commands()]}')
+                else:
+                    print(f'❌ Moderation cog not found after loading')
         except Exception as e:
             print(f'❌ Failed to load {cog}: {e}')
+            import traceback
+            traceback.print_exc()
 
 @bot.event
 async def on_ready():
@@ -381,6 +391,19 @@ async def start_health_server():
 @bot.command(name='ping')
 async def ping(ctx):
     await ctx.send('🏓 Pong!')
+
+@bot.command(name='sync')
+async def sync(ctx):
+    """Force sync slash commands (admin only)"""
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.send("❌ Solo gli amministratori possono usare questo comando.")
+        return
+    
+    try:
+        synced = await bot.tree.sync()
+        await ctx.send(f"✅ Sincronizzati {len(synced)} comandi slash!")
+    except Exception as e:
+        await ctx.send(f"❌ Errore nella sincronizzazione: {e}")
 
 async def main():
     """Main function to start both bot and server"""
