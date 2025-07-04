@@ -64,8 +64,8 @@ class RuleViolationSelect(discord.ui.Select):
         if self.image:
             embed.set_image(url=self.image.url)
 
-        # Log to moderation channel
-        log_channel = interaction.client.get_channel(Config.MODERATION_LOG_CHANNEL)
+        # Log to moderation log channel
+        log_channel = interaction.client.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
         if log_channel:
             await log_channel.send(embed=embed)
 
@@ -146,8 +146,8 @@ class CustomReasonModal(discord.ui.Modal):
         if self.image:
             embed.set_image(url=self.image.url)
 
-        # Log to moderation channel
-        log_channel = interaction.client.get_channel(Config.MODERATION_LOG_CHANNEL)
+        # Log to moderation log channel
+        log_channel = interaction.client.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
         if log_channel:
             await log_channel.send(embed=embed)
 
@@ -267,8 +267,8 @@ class ModerationCog(commands.Cog):
                 color=Config.COLORS["warning"]
             )
 
-            # Send to moderation log channel
-            log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
+            # Log to moderation log channel
+            log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
             if log_channel:
                 await log_channel.send(embed=log_embed)
 
@@ -323,8 +323,8 @@ class ModerationCog(commands.Cog):
                 color=Config.COLORS["error"]
             )
 
-            # Send to moderation log channel
-            log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
+            # Log to moderation log channel
+            log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
             if log_channel:
                 await log_channel.send(embed=log_embed)
 
@@ -374,8 +374,8 @@ class ModerationCog(commands.Cog):
                 color=Config.COLORS["error"]
             )
 
-            # Send to moderation log channel
-            log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
+            # Log to moderation log channel
+            log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
             if log_channel:
                 await log_channel.send(embed=log_embed)
 
@@ -394,7 +394,7 @@ class ModerationCog(commands.Cog):
             await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
             return
 
-        announcement_channel = self.bot.get_channel(Config.ANNOUNCEMENT_CHANNEL)
+        announcement_channel = self.bot.get_channel(getattr(Config, 'ANNOUNCEMENT_CHANNEL', None))
         if not announcement_channel:
             await interaction.response.send_message("❌ Announcement channel not found.", ephemeral=True)
             return
@@ -486,7 +486,7 @@ class ModerationCog(commands.Cog):
             )
 
             # Log to moderation channel
-            log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
+            log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
             if log_channel:
                 await log_channel.send(embed=embed)
 
@@ -516,7 +516,7 @@ class ModerationCog(commands.Cog):
         )
 
         # Log to moderation channel
-        log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
+        log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
         if log_channel:
             await log_channel.send(embed=embed)
 
@@ -580,7 +580,7 @@ class ModerationCog(commands.Cog):
             embed.timestamp = discord.utils.utcnow()
 
             # Log to moderation channel
-            log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
+            log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
             if log_channel:
                 await log_channel.send(embed=embed)
 
@@ -600,7 +600,7 @@ class ModerationCog(commands.Cog):
             await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
             return
 
-        announcement_channel = self.bot.get_channel(Config.ANNOUNCEMENT_CHANNEL)
+        announcement_channel = self.bot.get_channel(getattr(Config, 'ANNOUNCEMENT_CHANNEL', None))
         if not announcement_channel:
             await interaction.response.send_message("❌ Announcement channel not found.", ephemeral=True)
             return
@@ -773,6 +773,12 @@ class ModerationCog(commands.Cog):
                 color=Config.COLORS["error"]
             )
             await interaction.response.send_message(embed=error_embed, ephemeral=True)
+
+    def has_staff_permissions(self, user: discord.Member):
+        """Check if a user has staff permissions based on roles."""
+        if any(role.id in getattr(Config, 'STAFF_ROLES', []) for role in user.roles) or user.guild_permissions.manage_messages:
+            return True
+        return False
 
 async def setup(bot):
     await bot.add_cog(ModerationCog(bot))

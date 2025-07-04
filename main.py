@@ -63,8 +63,8 @@ async def on_ready():
 
     # Sync slash commands with better error handling
     try:
-        # Clear existing commands first
-        bot.tree.clear_commands()
+        # Clear existing commands first (guild=None means global commands)
+        bot.tree.clear_commands(guild=None)
 
         # Sync commands globally
         synced = await bot.tree.sync()
@@ -482,7 +482,7 @@ async def sync(ctx):
 
     try:
         # Clear and sync commands
-        bot.tree.clear_commands()
+        bot.tree.clear_commands(guild=None)
         synced = await bot.tree.sync()
 
         # Get all registered commands
