@@ -24,6 +24,39 @@ async def on_ready():
     print(f'🏖️ Connected to {len(bot.guilds)} servers')
     bot.start_time = datetime.utcnow()
 
+# Load all cogs
+async def load_cogs():
+    cogs = [
+        'bot.automod',
+        'bot.admin_logging', 
+        'bot.moderation',
+        'bot.utils',
+        'bot.suspicious_activity'  # Add our new suspicious activity system
+    ]
+    
+    for cog in cogs:
+        try:
+            await bot.load_extension(cog)
+            print(f'✅ Loaded {cog}')
+        except Exception as e:
+            print(f'❌ Failed to load {cog}: {e}')
+
+@bot.event
+async def on_ready():
+    print(f'🌴 {bot.user} has connected to Discord!')
+    print(f'🏖️ Connected to {len(bot.guilds)} servers')
+    bot.start_time = datetime.utcnow()
+    
+    # Load cogs after bot is ready
+    await load_cogs()
+    
+    # Sync slash commands
+    try:
+        synced = await bot.tree.sync()
+        print(f'🔄 Synced {len(synced)} command(s)')
+    except Exception as e:
+        print(f'❌ Failed to sync commands: {e}')
+
 async def start_health_server():
     """Complete API server with all endpoints for Monroe Dashboard"""
     print("🌐 Starting API server...")
