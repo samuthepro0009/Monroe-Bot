@@ -1,0 +1,472 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monroe Social Club Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .bot-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            border: 3px solid #333;
+            display: block;
+        }
+
+        .bot-name {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .created-by {
+            font-size: 14px;
+            font-style: italic;
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .status-container {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online {
+            background: #10b981;
+        }
+
+        .status-dot.offline {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .status-text {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .status-details {
+            font-size: 14px;
+            color: #888;
+            margin-top: 8px;
+        }
+
+        .dashboard-btn {
+            background: #ffffff;
+            color: #000000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .dashboard-btn:hover {
+            background: #e5e5e5;
+            transform: translateY(-1px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            margin: 15% auto;
+            padding: 30px;
+            border: 1px solid #333;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .modal h2 {
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        .login-btn {
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+
+        .login-btn:hover {
+            background: #059669;
+        }
+
+        .cancel-btn {
+            background: transparent;
+            color: #888;
+            border: 1px solid #333;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .cancel-btn:hover {
+            background: #333;
+        }
+
+        .dashboard {
+            display: none;
+            max-width: 800px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .dashboard-header {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .command-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .command-section h3 {
+            margin-bottom: 15px;
+            color: #ffffff;
+        }
+
+        .command-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .command-btn {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+
+        .command-btn:hover {
+            background: #333;
+            border-color: #10b981;
+        }
+
+        .command-btn h4 {
+            margin-bottom: 5px;
+            color: #10b981;
+        }
+
+        .command-btn p {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .logout-btn {
+            background: #ef4444;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            float: right;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="main-interface">
+        <img src="{{ bot_avatar }}" alt="Monroe Social Club Assistant" class="bot-avatar" id="bot-avatar">
+        <h1 class="bot-name">Monroe Social Club Assistant</h1>
+        <p class="created-by">Created by Samu</p>
+        
+        <div class="status-container">
+            <div class="status-indicator">
+                <div class="status-dot" id="status-dot"></div>
+                <span class="status-text" id="status-text">Checking status...</span>
+            </div>
+            <div class="status-details" id="status-details">
+                Loading bot information...
+            </div>
+        </div>
+        
+        <button class="dashboard-btn" onclick="openLoginModal()">
+            Access Dashboard
+        </button>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Dashboard Login</h2>
+            <form onsubmit="login(event)">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="login-btn">Login</button>
+                    <button type="button" class="cancel-btn" onclick="closeLoginModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+        <div class="dashboard-header">
+            <h2>Monroe Social Club Dashboard</h2>
+            <p style="color: #888; margin-top: 5px;">Bot Management Interface</p>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+            <div style="clear: both;"></div>
+        </div>
+
+        <div class="command-section">
+            <h3>📢 Announcements</h3>
+            <div class="command-grid">
+                <div class="command-btn" onclick="executeCommand('announcement')">
+                    <h4>/announcement</h4>
+                    <p>Send server announcements</p>
+                </div>
+                <div class="command-btn" onclick="executeCommand('broadcast')">
+                    <h4>/broadcast</h4>
+                    <p>Broadcast to all channels</p>
+                </div>
+                <div class="command-btn" onclick="executeCommand('qotd')">
+                    <h4>/qotd</h4>
+                    <p>Send question of the day</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="command-section">
+            <h3>👮 Moderation</h3>
+            <div class="command-grid">
+                <div class="command-btn" onclick="executeCommand('warn')">
+                    <h4>/warn</h4>
+                    <p>Warn a member</p>
+                </div>
+                <div class="command-btn" onclick="executeCommand('kick')">
+                    <h4>/kick</h4>
+                    <p>Kick a member</p>
+                </div>
+                <div class="command-btn" onclick="executeCommand('ban')">
+                    <h4>/ban</h4>
+                    <p>Ban a member</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="command-section">
+            <h3>📊 Information</h3>
+            <div class="command-grid">
+                <div class="command-btn" onclick="executeCommand('status')">
+                    <h4>/status</h4>
+                    <p>Check bot status</p>
+                </div>
+                <div class="command-btn" onclick="executeCommand('server_info')">
+                    <h4>/server_info</h4>
+                    <p>Server information</p>
+                </div>
+                <div class="command-btn" onclick="executeCommand('user_info')">
+                    <h4>/user_info</h4>
+                    <p>User information</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isLoggedIn = false;
+
+        // Check bot status on page load
+        async function checkBotStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const statusDot = document.getElementById('status-dot');
+                const statusText = document.getElementById('status-text');
+                const statusDetails = document.getElementById('status-details');
+                
+                if (data.online) {
+                    statusDot.className = 'status-dot online';
+                    statusText.textContent = 'Online';
+                    statusDetails.textContent = `Uptime: ${data.uptime} | Servers: ${data.serverCount} | Users: ${data.userCount}`;
+                } else {
+                    statusDot.className = 'status-dot offline';
+                    statusText.textContent = 'Offline';
+                    statusDetails.textContent = 'Bot is currently offline';
+                }
+            } catch (error) {
+                const statusDot = document.getElementById('status-dot');
+                const statusText = document.getElementById('status-text');
+                const statusDetails = document.getElementById('status-details');
+                
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = 'Error';
+                statusDetails.textContent = 'Unable to fetch status';
+            }
+        }
+
+        function openLoginModal() {
+            document.getElementById('loginModal').style.display = 'block';
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').style.display = 'none';
+        }
+
+        function login(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (username === 'Samu' && password === 'NapoliEsplosa11') {
+                isLoggedIn = true;
+                closeLoginModal();
+                document.getElementById('main-interface').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                
+                // Clear form
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+            } else {
+                alert('Invalid credentials');
+            }
+        }
+
+        function logout() {
+            isLoggedIn = false;
+            document.getElementById('main-interface').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+
+        function executeCommand(command) {
+            // Simulate command execution
+            alert(`Executing command: /${command}\n\nThis would trigger the bot command in a real implementation.`);
+        }
+
+        // Check status on page load and every 30 seconds
+        checkBotStatus();
+        setInterval(checkBotStatus, 30000);
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('loginModal');
+            if (event.target == modal) {
+                closeLoginModal();
+            }
+        }
+    </script>
+</body>
+</html>

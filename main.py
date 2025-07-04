@@ -4,6 +4,9 @@ import os
 import json
 from datetime import datetime
 from aiohttp import web
+from aiohttp_jinja2 import setup as jinja2_setup, template
+import aiohttp_jinja2
+import jinja2
 import asyncio
 
 # Bot setup
@@ -74,9 +77,20 @@ async def start_health_server():
     async def handle_health(request):
         return web.Response(text="Bot is running!")
 
+    @template('index.html')
+    async def handle_index(request):
+        """Serve the main web interface"""
+        bot_avatar_url = str(bot.user.avatar.url) if bot.user and bot.user.avatar else "https://cdn.discordapp.com/embed/avatars/0.png"
+        return {
+            'bot_avatar': bot_avatar_url
+        }
+
     async def handle_status(request):
-        auth_error = await check_auth(request)
-        if auth_error: return auth_error
+        # Allow public access to status for the web interface
+        # Only require auth if Authorization header is present but invalid
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header and not (auth_header.startswith('Bearer ') and auth_header[7:] == API_SECRET):
+            return web.json_response({'error': 'Unauthorized'}, status=401)
 
         try:
             guild_count = len(bot.guilds) if hasattr(bot, 'guilds') else 0
@@ -300,8 +314,12 @@ async def start_health_server():
 
     # Create web app with all endpoints
     app = web.Application()
+    
+    # Setup Jinja2 templates
+    jinja2_setup(app, loader=jinja2.FileSystemLoader('templates'))
+    
+    app.router.add_get('/', handle_index)
     app.router.add_get('/health', handle_health)
-    app.router.add_get('/', lambda req: web.Response(text="Monroe Bot API Server"))
     app.router.add_get('/api/status', handle_status)
     app.router.add_post('/api/broadcast', handle_broadcast)
     app.router.add_post('/api/qotd', handle_qotd)
