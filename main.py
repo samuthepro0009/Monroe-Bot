@@ -71,10 +71,7 @@ async def on_ready():
     print(f'🏖️ Connected to {len(bot.guilds)} servers')
     bot.start_time = datetime.utcnow()
 
-    # Load cogs first
-    await load_cogs()
-
-    # Wait a moment for cogs to fully initialize
+    # Wait a moment for cogs to fully initialize (they're already loaded by setup_bot)
     await asyncio.sleep(2)
 
     # Sync slash commands with better error handling
@@ -98,7 +95,7 @@ async def on_ready():
 
         # Verify sync worked
         if len(synced) > 0:
-            print(f'✅ Successfully synced commands: {[cmd["name"] for cmd in synced]}')
+            print(f'✅ Successfully synced commands: {[cmd.name for cmd in synced]}')
         else:
             print('❌ No commands were synced - checking for issues...')
             

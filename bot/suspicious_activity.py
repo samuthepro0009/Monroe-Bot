@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 import asyncio
@@ -6,11 +5,12 @@ from datetime import datetime, timedelta
 from collections import defaultdict, deque
 import re
 from bot.config import Config
+from bot.embeds import create_moderation_embed
 
 class SuspiciousActivityCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        
+
         # Tracking dictionaries
         self.message_frequency = defaultdict(deque)  # User ID -> timestamps
         self.channel_hopping = defaultdict(deque)    # User ID -> channel IDs
@@ -18,21 +18,21 @@ class SuspiciousActivityCog(commands.Cog):
         self.reaction_spam = defaultdict(deque)      # User ID -> reaction timestamps
         self.suspicious_patterns = defaultdict(int) # User ID -> pattern count
         self.voice_hopping = defaultdict(deque)      # User ID -> voice channel switches
-        
+
         # Suspicious activity thresholds
         self.SPAM_THRESHOLD = 8  # messages per minute
         self.CHANNEL_HOP_THRESHOLD = 5  # channels in 2 minutes
         self.FAILED_COMMAND_THRESHOLD = 10  # failed commands per hour
         self.REACTION_SPAM_THRESHOLD = 15  # reactions per minute
         self.VOICE_HOP_THRESHOLD = 4  # voice channels in 5 minutes
-        
+
         # Suspicious patterns
         self.suspicious_keywords = [
             'raid', 'nuke', 'destroy server', 'delete everything', 'crash bot',
             'mass ban', 'exploit', 'hack', 'ddos', 'doxx', 'token grab',
             'server crash', 'mass kick', 'admin panel', 'backdoor'
         ]
-        
+
         # Cleanup task
         self.cleanup_task = asyncio.create_task(self.cleanup_old_data())
 
@@ -45,7 +45,7 @@ class SuspiciousActivityCog(commands.Cog):
             try:
                 await asyncio.sleep(600)  # 10 minutes
                 current_time = datetime.utcnow()
-                
+
                 # Clean message frequency data (older than 5 minutes)
                 for user_id in list(self.message_frequency.keys()):
                     self.message_frequency[user_id] = deque([
@@ -54,7 +54,7 @@ class SuspiciousActivityCog(commands.Cog):
                     ])
                     if not self.message_frequency[user_id]:
                         del self.message_frequency[user_id]
-                
+
                 # Clean channel hopping data (older than 10 minutes)
                 for user_id in list(self.channel_hopping.keys()):
                     self.channel_hopping[user_id] = deque([
@@ -63,13 +63,13 @@ class SuspiciousActivityCog(commands.Cog):
                     ])
                     if not self.channel_hopping[user_id]:
                         del self.channel_hopping[user_id]
-                
+
                 # Reset failed commands counter every hour
                 if current_time.minute == 0:
                     self.failed_commands.clear()
-                
+
                 print("🧹 Cleaned up suspicious activity tracking data")
-                
+
             except Exception as e:
                 print(f"❌ Error in cleanup task: {e}")
 
@@ -86,7 +86,7 @@ class SuspiciousActivityCog(commands.Cog):
             "high": 0xFF0000,     # Red
             "critical": 0x8B0000  # Dark Red
         }
-        
+
         severity_emojis = {
             "low": "🟡",
             "medium": "🟠", 
@@ -151,7 +151,7 @@ class SuspiciousActivityCog(commands.Cog):
 
         # Track message frequency (spam detection)
         self.message_frequency[user_id].append(current_time)
-        
+
         # Remove messages older than 1 minute
         while (self.message_frequency[user_id] and 
                current_time - self.message_frequency[user_id][0] > timedelta(minutes=1)):
@@ -169,7 +169,7 @@ class SuspiciousActivityCog(commands.Cog):
 
         # Track channel hopping
         self.channel_hopping[user_id].append((current_time, message.channel.id))
-        
+
         # Remove entries older than 2 minutes
         while (self.channel_hopping[user_id] and 
                current_time - self.channel_hopping[user_id][0][0] > timedelta(minutes=2)):
@@ -232,7 +232,7 @@ class SuspiciousActivityCog(commands.Cog):
 
         # Track reaction frequency
         self.reaction_spam[user_id].append(current_time)
-        
+
         # Remove reactions older than 1 minute
         while (self.reaction_spam[user_id] and 
                current_time - self.reaction_spam[user_id][0] > timedelta(minutes=1)):
@@ -260,7 +260,7 @@ class SuspiciousActivityCog(commands.Cog):
         # Only track if user switched channels (not just joined/left)
         if before.channel and after.channel and before.channel != after.channel:
             self.voice_hopping[user_id].append((current_time, after.channel.id))
-            
+
             # Remove entries older than 5 minutes
             while (self.voice_hopping[user_id] and 
                    current_time - self.voice_hopping[user_id][0][0] > timedelta(minutes=5)):
@@ -281,7 +281,7 @@ class SuspiciousActivityCog(commands.Cog):
     async def on_member_join(self, member):
         """Monitor for suspicious new accounts"""
         account_age = (discord.utils.utcnow() - member.created_at).days
-        
+
         # Flag very new accounts
         if account_age < 1:
             await self.log_suspicious_activity(
@@ -291,14 +291,14 @@ class SuspiciousActivityCog(commands.Cog):
                 severity="low",
                 additional_info=f"**Account Created:** <t:{int(member.created_at.timestamp())}:R>\n**Default Avatar:** {'Yes' if not member.avatar else 'No'}"
             )
-        
+
         # Flag accounts with suspicious usernames
         suspicious_name_patterns = [
             r'[0-9]{4,}',  # Many numbers
             r'^[a-z]+[0-9]{4,}$',  # Word followed by many numbers
             r'discord|admin|mod|staff|owner|bot',  # Staff impersonation
         ]
-        
+
         for pattern in suspicious_name_patterns:
             if re.search(pattern, member.name.lower()):
                 await self.log_suspicious_activity(
@@ -315,14 +315,14 @@ class SuspiciousActivityCog(commands.Cog):
         """Track failed command attempts"""
         user_id = interaction.user.id
         self.failed_commands[user_id] += 1
-        
+
         if self.failed_commands[user_id] >= self.FAILED_COMMAND_THRESHOLD:
             await self.log_suspicious_activity(
                 interaction.user,
                 "Excessive Failed Commands",
                 f"Failed {self.failed_commands[user_id]} commands in the past hour",
                 severity="medium",
-                additional_info=f"**Latest Error:** {type(error).__name__}\n**Command:** /{interaction.command.name if interaction.command else 'Unknown'}\n**Threshold:** {self.FAILED_COMMAND_THRESHOLD} failures/hour"
+                additional_info=f"**Latest Error:** {type(error).__name__}\n**Command:** /{interaction.command.name if hasattr(interaction, 'command') and interaction.command else 'Unknown'}\n**Threshold:** {self.FAILED_COMMAND_THRESHOLD} failures/hour"
             )
 
 async def setup(bot):

@@ -1,11 +1,3 @@
-
-# =============================================================================
-# MONROE SOCIAL CLUB BOT - UNIFIED CONFIGURATION
-# =============================================================================
-# This file contains ALL configuration options for the Monroe Social Club bot.
-# Sections are clearly marked for easy navigation and maintenance.
-# =============================================================================
-
 import os
 import discord
 
@@ -29,11 +21,12 @@ class Config:
     # SERVER & CHANNEL CONFIGURATION
     # =============================================================================
     
-    # Logging Channels
-    AUTOMOD_LOG_CHANNEL = 1357714336356761662
-    MODERATION_LOG_CHANNEL = 1353388676981456917
-    ADMIN_LOG_CHANNEL = 1387524238117830776
-    APPLICATION_LOG_CHANNEL = 1357714351280361472
+    # Channel IDs
+    MODERATION_LOG_CHANNEL = 1353388424295350283  # Replace with actual channel ID
+    AUTOMOD_LOG_CHANNEL = 1353388424295350283     # Replace with actual channel ID
+    ANNOUNCEMENT_CHANNEL = 1353388424295350283    # Replace with actual channel ID
+    APPLICATION_LOG_CHANNEL = 1353388424295350283  # Replace with actual channel ID
+    DEVLOG_CHANNEL = 1353388424295350283          # Replace with actual channel ID
     
     # Public Channels
     ANNOUNCEMENT_CHANNEL = 1353388424295350283
@@ -56,8 +49,11 @@ class Config:
         "Vice President": "Rev"
     }
     
-    # Staff role IDs (configure these with actual role IDs)
-    STAFF_ROLES = []  # Add actual staff role IDs here
+    # Role IDs
+    STAFF_ROLES = [
+        1353388424295350283,  # Replace with actual staff role IDs
+        1353388424295350284,
+    ]
     SECURITY_ROLES = []  # Add actual security role IDs here
     ADMIN_ROLES = []  # Add actual admin role IDs here
     
@@ -68,7 +64,7 @@ class Config:
     # Roblox Group and Game Settings
     ROBLOX_GROUP_ID = 35828136
     ROBLOX_MAP_ID = 80340506584377
-    ROBLOX_GAME_LINK = "https://www.roblox.com/games/80340506584377/Monroe-Social-Club"
+    ROBLOX_GAME_LINK = "https://www.roblox.com/games/your-game-id"
     ROVER_API_BASE = "https://registry.rover.link/api"
     
     # =============================================================================
@@ -95,72 +91,23 @@ class Config:
     RAID_DETECTION_THRESHOLD = 5  # users joining within time window
     RAID_DETECTION_TIME_WINDOW = 30  # seconds
     
-    # Server rules with severity levels
+    # Server Rules
     SERVER_RULES = {
-        # Gravità 1 – Chat
-        "1.1.1": "Caps Abuse – Excessive use of ALL CAPS in messages",
-        "1.1.2": "Spoilers – Posting spoilers without proper tags or warnings",
-        "1.1.3": "Emoji/Sticker Abuse – Overusing or misusing custom emojis/stickers",
-        "1.1.4": "Language Violation – Using a language not permitted in public chats",
-        "1.1.5": "Ghost Pings – Mentioning users then deleting the message to annoy",
-        "1.1.6": "Backseat Moderation – Trying to enforce rules without being staff",
-        "1.1.7": "Inappropriate Nicknames – Offensive or misleading nicknames",
-
-        # Gravità 1 – Voice
-        "1.2.1": "Mic Spam – Background noise or minor disruption in voice chats",
-        "1.2.2": "Unnecessary Soundboard Use – Mild misuse of audio tools",
-
-        # Gravità 1 – Gioco
-        "1.3.1": "Minor Fail RP – Small unrealistic or off-character actions",
-        "1.3.2": "Breaking Character – Light disruptions of RP immersion",
-
-        # Gravità 2 – Chat
-        "2.1.1": "Spam – Repetitive messages, emojis, or bot commands",
-        "2.1.2": "Flaming – Hostile arguments or provoking others",
-        "2.1.3": "Toxic Behavior – Negative or aggressive conduct in chat",
-        "2.1.4": "Malicious Links – Sharing misleading or unsafe URLs",
-        "2.1.5": "Advertising – Promoting external content without permission",
-        "2.1.6": "Fake Reports – Submitting false claims to staff",
-        "2.1.7": "Impersonation – Pretending to be others, especially staff",
-        "2.1.8": "Inappropriate Jokes – Sensitive jokes about trauma, suicide, etc.",
-
-        # Gravità 2 – Voice
-        "2.2.1": "Loud Noises – Shouting, static, or other disruptions in VC",
-        "2.2.2": "Soundboard Misuse – Inappropriate or repeated use of audio clips",
-        "2.2.3": "Camera Misuse – Using a webcam inappropriately",
-
-        # Gravità 2 – Gioco
-        "2.3.1": "Fail RP – Unrealistic or trollish behavior in RP",
-        "2.3.2": "Metagaming – Using OOC info to gain IC advantage",
-        "2.3.3": "Powergaming – Forcing actions onto others in RP",
-        "2.3.4": "ERP – Erotic or suggestive roleplay (zero tolerance)",
-        "2.3.5": "Application Abuse – Joke or troll answers in applications",
-        "2.3.6": "Late Event Entry – Joining RP or applications after deadline",
-        "2.3.7": "Unfair Advantage – Exploiting bugs, glitches or favoritism",
-
-        # Gravità 3 – Chat
-        "3.1.1": "Slurring – Use of hateful or racist slurs",
-        "3.1.2": "Harassment – Targeting or bullying individuals repeatedly",
-        "3.1.3": "Discrimination – Hate based on race, gender, religion, etc.",
-        "3.1.4": "NSFW Content – Posting pornographic or disturbing content",
-        "3.1.5": "Security Threats – Discussing or engaging in hacking/exploiting",
-        "3.1.6": "Ban Evasion – Using alts/VPNs to bypass punishments",
-        "3.1.7": "Leaking Internal Info – Sharing private staff/server data",
-        "3.1.8": "Staff Disrespect – Openly ignoring or attacking staff decisions",
-        "3.1.9": "Incitement – Promoting hate, violence, or illegal actions",
-        "3.1.10": "Doxxing – Sharing personal/private information without consent",
-
-        # Gravità 3 – Voice
-        "3.2.1": "Major VC Disruption – Coordinated trolling or aggressive behavior in VC",
-        "3.2.2": "Screen Sharing NSFW – Sharing graphic or rule-breaking content in VC",
-        "3.2.3": "Raiding VC – Organized disruption via multiple users in VC",
-
-        # Gravità 3 – Gioco
-        "3.3.1": "Major Fail RP – Extremely unrealistic or immersion-breaking actions",
-        "3.3.2": "Griefing Events – Disrupting serious RP or events intentionally",
-        "3.3.3": "Alt Abuse – Using alternate accounts in RP/games to gain advantage",
-        "3.3.4": "ERP (Severe) – Explicit RP scenes or repeat offenses",
-        "3.3.5": "Raiding – Coordinated trolling inside game servers"
+        "1.1": "No Spamming - Avoid sending repetitive messages or excessive content",
+        "1.2": "No Inappropriate Content - Keep all content family-friendly and appropriate",
+        "1.3": "No Harassment - Treat all members with respect and kindness",
+        "1.4": "No Self-Promotion - Avoid advertising other servers or content without permission",
+        "1.5": "Use Appropriate Channels - Post content in the correct channels",
+        "2.1": "No NSFW Content - Absolutely no adult content allowed",
+        "2.2": "No Hate Speech - Zero tolerance for discriminatory language",
+        "2.3": "No Doxxing - Never share personal information of others",
+        "2.4": "No Impersonation - Don't pretend to be someone else",
+        "2.5": "No Bypassing Moderation - Don't attempt to circumvent bans or mutes",
+        "3.1": "No Raiding - Organizing attacks on other servers is prohibited",
+        "3.2": "No Malicious Links - Don't share harmful or dangerous links",
+        "3.3": "No Bot Abuse - Don't spam bot commands or attempt to break the bot",
+        "3.4": "No Alt Accounts - Using alternate accounts to bypass punishments is forbidden",
+        "3.5": "Follow Discord ToS - All Discord Terms of Service apply"
     }
     
     # =============================================================================
@@ -357,20 +304,14 @@ class Config:
     # VISUAL & THEME CONFIGURATION
     # =============================================================================
     
-    # Color scheme for embeds
+    # Colors
     COLORS = {
-        "success": 0x00FF00,      # Bright green
-        "error": 0xFF0000,        # Bright red
-        "warning": 0xFFFF00,      # Bright yellow
-        "info": 0x00CED1,         # Dark turquoise
-        "pink": 0xFF69B4,         # Hot pink
-        "purple": 0x9932CC,       # Dark orchid
-        "blue": 0x4169E1,         # Royal blue
-        "orange": 0xFF4500,       # Orange red
-        "gold": 0xFFD700,         # Gold
-        "lime": 0x00FF00,         # Lime green
-        "cyan": 0x00FFFF,         # Cyan
-        "magenta": 0xFF00FF       # Magenta
+        "success": 0x00ff00,
+        "error": 0xff0000,
+        "warning": 0xffa500,
+        "info": 0x00bfff,
+        "purple": 0x7c3aed,
+        "pink": 0xff69b4
     }
     
     # Admin logging colors by action type
