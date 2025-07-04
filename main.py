@@ -40,7 +40,7 @@ async def load_cogs():
         'bot.activity_leaderboard',
         'bot.keep_alive'
     ]
-    
+
     for cog in cogs:
         try:
             await bot.load_extension(cog)
@@ -53,10 +53,10 @@ async def on_ready():
     print(f'🌴 {bot.user} has connected to Discord!')
     print(f'🏖️ Connected to {len(bot.guilds)} servers')
     bot.start_time = datetime.utcnow()
-    
+
     # Load cogs after bot is ready
     await load_cogs()
-    
+
     # Sync slash commands
     try:
         synced = await bot.tree.sync()
@@ -277,19 +277,59 @@ async def start_health_server():
 
             if action == 'warn':
                 try:
-                    embed = discord.Embed(
-                        title="⚠️ Warning",
+                    # Send DM to user
+                    dm_embed = discord.Embed(
+                        title="⚠️ Warning - Monroe Social Club",
                         description=f"You have been warned in {guild.name}",
                         color=0xfbbf24,
                         timestamp=datetime.utcnow()
                     )
-                    embed.add_field(name="Reason", value=reason, inline=False)
-                    embed.add_field(name="Moderator", value=dashboard_user, inline=True)
+                    dm_embed.add_field(name="Reason", value=reason, inline=False)
+                    dm_embed.add_field(name="Staff Member", value=dashboard_user, inline=True)
+                    dm_embed.set_footer(text="Please follow server rules to avoid further action.")
 
-                    await member.send(embed=embed)
-                    result = f"Warning sent to {member.display_name}"
+                    await member.send(embed=dm_embed)
+                    dm_result = "DM sent"
                 except:
-                    result = f"Warning issued to {member.display_name} (DM failed)"
+                    dm_result = "DM failed"
+
+                # Log to moderation channel
+                try:
+                    from bot.config import Config
+                    from bot.embeds import create_moderation_embed
+
+                    # Create a mock staff member object for the embed
+                    class MockUser:
+                        def __init__(self, name):
+                            self.mention = f"@{name}"
+                            self.name = name
+                            self.discriminator = "0000"
+                            self.id = "dashboard"
+                            self.avatar = None
+                            self.default_avatar = type('obj', (object,), {'url': 'https://cdn.discordapp.com/embed/avatars/0.png'})()
+
+                    mock_staff = MockUser(dashboard_user)
+
+                    # Create moderation embed
+                    log_embed = create_moderation_embed(
+                        action="Warning",
+                        target=member,
+                        staff_member=mock_staff,
+                        reason=reason,
+                        color=Config.COLORS["warning"]
+                    )
+
+                    # Send to moderation log channel
+                    log_channel = bot.get_channel(Config.MODERATION_LOG_CHANNEL)
+                    if log_channel:
+                        await log_channel.send(embed=log_embed)
+                        log_result = "logged"
+                    else:
+                        log_result = "log channel not found"
+
+                    result = f"Warning issued to {member.display_name} ({dm_result}, {log_result})"
+                except Exception as e:
+                    result = f"Warning issued to {member.display_name} ({dm_result}, log failed: {str(e)})"
 
             elif action == 'kick':
                 await member.kick(reason=f"Dashboard moderation by {dashboard_user}: {reason}")
@@ -314,10 +354,10 @@ async def start_health_server():
 
     # Create web app with all endpoints
     app = web.Application()
-    
+
     # Setup Jinja2 templates
     jinja2_setup(app, loader=jinja2.FileSystemLoader('templates'))
-    
+
     app.router.add_get('/', handle_index)
     app.router.add_get('/health', handle_health)
     app.router.add_get('/api/status', handle_status)
