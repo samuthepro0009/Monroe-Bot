@@ -272,9 +272,9 @@ class ModerationCog(commands.Cog):
             print(f"❌ Warn command NOT found in cog app commands")
 
     @app_commands.command(name="warn", description="Warn a user")
-    @app_commands.describe(user="The user to warn", reason="Reason for the warning")
+    @app_commands.describe(user="The user to warn")
     @app_commands.default_permissions(kick_members=True)
-    async def warn(self, interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):
+    async def warn(self, interaction: discord.Interaction, user: discord.Member):
         try:
             # Check permissions
             if not interaction.user.guild_permissions.kick_members:
@@ -282,45 +282,9 @@ class ModerationCog(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
 
-            # Send DM to user
-            dm_sent = False
-            try:
-                dm_embed = discord.Embed(
-                    title="⚠️ Warning - Monroe Social Club",
-                    description=f"You have been warned in {interaction.guild.name}",
-                    color=Config.COLORS["warning"],
-                    timestamp=datetime.datetime.utcnow()
-                )
-                dm_embed.add_field(name="Reason", value=reason, inline=False)
-                dm_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
-                dm_embed.set_footer(text="Please follow server rules to avoid further action.")
-
-                await user.send(embed=dm_embed)
-                dm_sent = True
-            except Exception as e:
-                print(f"❌ Could not send DM to {user}: {e}")
-
-            # Create moderation log
-            log_embed = create_moderation_embed(
-                action="Warning",
-                target=user,
-                staff_member=interaction.user,
-                reason=reason,
-                color=Config.COLORS["warning"]
-            )
-
-            # Log to moderation log channel
-            log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
-            if log_channel:
-                await log_channel.send(embed=log_embed)
-
-            # Response to staff member
-            response = f"✅ {user.mention} has been warned for: {reason}"
-            if not dm_sent:
-                response += "\n⚠️ Could not send DM to user."
-
-            embed = create_success_embed("Warning Issued", response)
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # Open the rule selection panel
+            view = RuleViolationView("Warning", user, interaction.user)
+            await interaction.response.send_message("Select the rules violated:", view=view, ephemeral=True)
 
         except Exception as e:
             print(f"❌ Error in warn command: {e}")
