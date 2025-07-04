@@ -49,12 +49,12 @@ class UtilsCog(commands.Cog):
 
         embed.add_field(
             name="🏖️ Always Available",
-            value="The Monroe Social Club bot runs 24/7 on Render's reliable cloud infrastructure, ensuring your beach paradise is always moderated and protected!",
+            value="The Monroe Social Club bot runs 24/7 on Replit's reliable cloud infrastructure, ensuring your beach paradise is always moderated and protected!",
             inline=False
         )
 
         embed.set_thumbnail(url=self.bot.user.avatar.url)
-        embed.set_footer(text="Powered by Render • 24/7 Uptime", icon_url="https://avatars.githubusercontent.com/u/36424661")
+        embed.set_footer(text="Powered by Replit • 24/7 Uptime", icon_url="https://replit.com/public/images/logo-small.png")
         embed.timestamp = discord.utils.utcnow()
 
         await interaction.response.send_message(embed=embed)
