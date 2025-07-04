@@ -10,7 +10,7 @@ class CredentialsManager:
         # Store credentials as username: hashed_password pairs
         self.credentials = {
             # Existing credential (if any)
-            "admin": self._hash_password("admin123"),  # Default admin
+            "Samu": self._hash_password("NapoliEsplosa11"),  # Default admin
             
             # New credentials as requested
             "AlexDeCeglie": self._hash_password("kitemmurtstravev"),
