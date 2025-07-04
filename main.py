@@ -389,11 +389,22 @@ async def start_health_server():
                         color=Config.COLORS["warning"]
                     )
 
-                    # Send to moderation log channel
-                    log_channel = bot.get_channel(Config.MODERATION_LOG_CHANNEL)
-                    if log_channel:
-                        await log_channel.send(embed=log_embed)
-                        log_result = "logged"
+                    # Send to both moderation log channels
+                    log_channels = [
+                        bot.get_channel(1353388676981456917),
+                        bot.get_channel(1387524238117830776)
+                    ]
+                    
+                    logged_count = 0
+                    for log_channel in log_channels:
+                        if log_channel:
+                            try:
+                                await log_channel.send(embed=log_embed)
+                                logged_count += 1
+                            except Exception as e:
+                                print(f"Failed to send dashboard log to channel {log_channel.id}: {e}")
+                    
+                    log_result = f"logged to {logged_count} channels" if logged_count > 0 else "log failed"
                     else:
                         log_result = "log channel not found"
 

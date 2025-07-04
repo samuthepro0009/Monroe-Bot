@@ -71,10 +71,18 @@ class RuleViolationSelect(discord.ui.Select):
         if self.image:
             embed.set_image(url=self.image.url)
 
-        # Log to moderation log channel
-        log_channel = interaction.client.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
-        if log_channel:
-            await log_channel.send(embed=embed)
+        # Log to both moderation log channels
+        log_channels = [
+            interaction.client.get_channel(1353388676981456917),
+            interaction.client.get_channel(1387524238117830776)
+        ]
+
+        for log_channel in log_channels:
+            if log_channel:
+                try:
+                    await log_channel.send(embed=embed)
+                except Exception as e:
+                    print(f"Failed to send log to channel {log_channel.id}: {e}")
 
         # Send DM to user
         try:
@@ -166,10 +174,18 @@ class CustomReasonModal(discord.ui.Modal):
         if self.image:
             embed.set_image(url=self.image.url)
 
-        # Log to moderation log channel
-        log_channel = interaction.client.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
-        if log_channel:
-            await log_channel.send(embed=embed)
+        # Log to both moderation log channels
+        log_channels = [
+            interaction.client.get_channel(1353388676981456917),
+            interaction.client.get_channel(1387524238117830776)
+        ]
+
+        for log_channel in log_channels:
+            if log_channel:
+                try:
+                    await log_channel.send(embed=embed)
+                except Exception as e:
+                    print(f"Failed to send log to channel {log_channel.id}: {e}")
 
         # Send DM to user
         try:
@@ -429,10 +445,18 @@ class ModerationCog(commands.Cog):
                 color=Config.COLORS["success"]
             )
 
-            # Log to moderation channel
-            log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
-            if log_channel:
-                await log_channel.send(embed=embed)
+            # Log to both moderation log channels
+            log_channels = [
+                self.bot.get_channel(1353388676981456917),
+                self.bot.get_channel(1387524238117830776)
+            ]
+
+            for log_channel in log_channels:
+                if log_channel:
+                    try:
+                        await log_channel.send(embed=embed)
+                    except Exception as e:
+                        print(f"Failed to send log to channel {log_channel.id}: {e}")
 
             await interaction.response.send_message(f"✅ {banned_user.mention} has been unbanned for: {reason}", ephemeral=True)
         except discord.NotFound:
@@ -459,10 +483,18 @@ class ModerationCog(commands.Cog):
             color=Config.COLORS["success"]
         )
 
-        # Log to moderation channel
-        log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
-        if log_channel:
-            await log_channel.send(embed=embed)
+        # Log to both moderation log channels
+        log_channels = [
+            interaction.client.get_channel(1353388676981456917),
+            interaction.client.get_channel(1387524238117830776)
+        ]
+
+        for log_channel in log_channels:
+            if log_channel:
+                try:
+                    await log_channel.send(embed=embed)
+                except Exception as e:
+                    print(f"Failed to send log to channel {log_channel.id}: {e}")
 
         # Send DM to user
         try:
@@ -523,10 +555,18 @@ class ModerationCog(commands.Cog):
             embed.set_footer(text="Monroe Social Club - Moderation System", icon_url=interaction.user.avatar.url if interaction.user.avatar else interaction.user.default_avatar.url)
             embed.timestamp = discord.utils.utcnow()
 
-            # Log to moderation channel
-            log_channel = self.bot.get_channel(getattr(Config, 'MODERATION_LOG_CHANNEL', None))
-            if log_channel:
-                await log_channel.send(embed=embed)
+            # Log to both moderation log channels
+            log_channels = [
+                self.bot.get_channel(1353388676981456917),
+                self.bot.get_channel(1387524238117830776)
+            ]
+
+            for log_channel in log_channels:
+                if log_channel:
+                    try:
+                        await log_channel.send(embed=embed)
+                    except Exception as e:
+                        print(f"Failed to send log to channel {log_channel.id}: {e}")
 
             await interaction.followup.send(f"✅ Cleared {len(deleted)} messages for: {reason}", ephemeral=True)
         except discord.Forbidden:
