@@ -21,12 +21,6 @@ API_SECRET = os.getenv('API_SECRET', 'default-secret')
 ANNOUNCEMENT_CHANNEL_ID = 1353388424295350283
 BROADCAST_CHANNELS = [1353393437650718910, 1353395315197218847]
 
-@bot.event
-async def on_ready():
-    print(f'🌴 {bot.user} has connected to Discord!')
-    print(f'🏖️ Connected to {len(bot.guilds)} servers')
-    bot.start_time = datetime.utcnow()
-
 # Load all cogs
 async def load_cogs():
     cogs = [
@@ -88,6 +82,30 @@ async def on_ready():
         print(f'❌ Failed to sync commands: {e}')
         import traceback
         traceback.print_exc()
+
+    # Generate invite link with proper permissions (now that bot.user is available)
+    try:
+        permissions = discord.Permissions(
+            administrator=True,
+            send_messages=True,
+            manage_messages=True,
+            kick_members=True,
+            ban_members=True,
+            use_application_commands=True,
+            manage_roles=True,
+            view_channel=True,
+            read_message_history=True
+        )
+
+        invite_link = discord.utils.oauth_url(
+            client_id=bot.user.id,
+            permissions=permissions,
+            scopes=('bot', 'applications.commands')
+        )
+
+        print(f"🔗 Invite link with proper permissions: {invite_link}")
+    except Exception as e:
+        print(f"❌ Failed to generate invite link: {e}")
 
 async def start_health_server():
     """Complete API server with all endpoints for Monroe Dashboard"""
@@ -401,27 +419,6 @@ async def start_health_server():
     print(f"🌐 Monroe Bot API server listening on 0.0.0.0:{port}")
     print(f"✅ Health check: http://0.0.0.0:{port}/health")
     print(f"✅ API endpoints ready for dashboard connections")
-
-    # Generate invite link with proper permissions
-    permissions = discord.Permissions(
-        administrator=True,
-        send_messages=True,
-        manage_messages=True,
-        kick_members=True,
-        ban_members=True,
-        use_application_commands=True,
-        manage_roles=True,
-        view_channel=True,
-        read_message_history=True
-    )
-
-    invite_link = discord.utils.oauth_url(
-        client_id=bot.user.id,
-        permissions=permissions,
-        scopes=('bot', 'applications.commands')
-    )
-
-    print(f"🔗 Invite link with proper permissions: {invite_link}")
 
 # Bot commands
 @bot.command(name='ping')

@@ -155,3 +155,97 @@ def create_info_embed(title, description, fields=None):
     embed.timestamp = discord.utils.utcnow()
 
     return embed
+import discord
+from datetime import datetime
+from bot.config import Config
+
+def create_moderation_embed(action, target, staff_member, reason="No reason provided", color=None):
+    """Create a standardized moderation embed"""
+    if color is None:
+        color = Config.COLORS["warning"]
+    
+    embed = discord.Embed(
+        title=f"🛡️ {action}",
+        color=color,
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.add_field(
+        name="Target",
+        value=f"{target.mention} ({target.name}#{target.discriminator})\nID: {target.id}",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Staff Member",
+        value=f"{staff_member.mention} ({staff_member.name})",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Reason",
+        value=reason,
+        inline=False
+    )
+    
+    if hasattr(target, 'avatar') and target.avatar:
+        embed.set_thumbnail(url=target.avatar.url)
+    
+    embed.set_footer(text="Monroe Social Club Moderation", icon_url=None)
+    
+    return embed
+
+def create_info_embed(title, description, color=None):
+    """Create a standardized info embed"""
+    if color is None:
+        color = Config.COLORS["info"]
+    
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        color=color,
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.set_footer(text="Monroe Social Club")
+    
+    return embed
+
+def create_error_embed(title, description):
+    """Create a standardized error embed"""
+    embed = discord.Embed(
+        title=f"❌ {title}",
+        description=description,
+        color=Config.COLORS["error"],
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.set_footer(text="Monroe Social Club")
+    
+    return embed
+
+def create_success_embed(title, description):
+    """Create a standardized success embed"""
+    embed = discord.Embed(
+        title=f"✅ {title}",
+        description=description,
+        color=Config.COLORS["success"],
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.set_footer(text="Monroe Social Club")
+    
+    return embed
+
+def create_warning_embed(title, description):
+    """Create a standardized warning embed"""
+    embed = discord.Embed(
+        title=f"⚠️ {title}",
+        description=description,
+        color=Config.COLORS["warning"],
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.set_footer(text="Monroe Social Club")
+    
+    return embed

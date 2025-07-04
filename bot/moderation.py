@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from bot.config import Config
-from bot.embeds import create_moderation_embed
+from bot.embeds import create_moderation_embed, create_error_embed, create_success_embed
 import datetime
 
 class RuleViolationSelect(discord.ui.Select):
@@ -224,153 +224,168 @@ class ClearApplicationsView(discord.ui.View):
 class ModerationCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        print(f"🛡️ ModerationCog initialized")
 
-    def has_staff_permissions(self, member):
-        """Check if member has staff permissions"""
-        # Check for administrator permission or specific staff roles
-        if member.guild_permissions.administrator:
-            return True
+    async def cog_load(self):
+        print(f"🛡️ ModerationCog loaded successfully")
 
-        # Check staff roles (configure these in config.py)
-        staff_role_ids = Config.STAFF_ROLES
-        member_roles = [role.id for role in member.roles]
-        return any(role_id in member_roles for role_id in staff_role_ids)
-
-    def check_bot_permissions(self, guild):
-        """Check if bot has necessary permissions"""
-        bot_member = guild.get_member(self.bot.user.id)
-        if not bot_member:
-            return False, "Bot non trovato nel server"
-        
-        perms = bot_member.guild_permissions
-        missing_perms = []
-        
-        required_perms = {
-            'kick_members': 'Kick Members',
-            'ban_members': 'Ban Members', 
-            'manage_messages': 'Manage Messages',
-            'send_messages': 'Send Messages',
-            'use_application_commands': 'Use Application Commands'
-        }
-        
-        for perm_attr, perm_name in required_perms.items():
-            if not getattr(perms, perm_attr, False):
-                missing_perms.append(perm_name)
-        
-        if missing_perms:
-            return False, f"Permessi mancanti: {', '.join(missing_perms)}"
-        
-        return True, "Tutti i permessi sono presenti"
-
-    @app_commands.command(name="warn", description="Warn a member")
-    @app_commands.describe(
-        member="The member to warn",
-        image="Optional image attachment"
-    )
-    async def warn(self, interaction: discord.Interaction, member: discord.Member, image: discord.Attachment = None):
-        # Check bot permissions first
-        has_perms, perm_msg = self.check_bot_permissions(interaction.guild)
-        if not has_perms:
-            await interaction.response.send_message(f"❌ Bot permission error: {perm_msg}", ephemeral=True)
-            return
-            
-        if not self.has_staff_permissions(interaction.user):
-            await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
-            return
-
-        # Show rule selection interface
-        embed = discord.Embed(
-            title="⚠️ Warning Member",
-            description=f"Select the rule violation for {member.mention}:",
-            color=Config.COLORS["warning"]
-        )
-
-        view = RuleViolationView("Warning", member, interaction.user, image)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
-    @app_commands.command(name="kick", description="Kick a member from the server")
-    @app_commands.describe(
-        member="The member to kick",
-        reason="Reason for the kick",
-        image="Optional image attachment"
-    )
-    async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: str, image: discord.Attachment = None):
-        if not self.has_staff_permissions(interaction.user):
-            await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
-            return
-
-        if member.top_role >= interaction.user.top_role and not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message("❌ You cannot kick this member due to role hierarchy.", ephemeral=True)
-            return
-
-        # Create kick embed
-        embed = create_moderation_embed(
-            action="Kick",
-            target=member,
-            staff_member=interaction.user,
-            reason=reason,
-            color=Config.COLORS["error"]
-        )
-
-        if image:
-            embed.set_image(url=image.url)
-
-        # Send DM before kicking
+    @app_commands.command(name="warn", description="Warn a user")
+    @app_commands.describe(user="The user to warn", reason="Reason for the warning")
+    @app_commands.default_permissions(kick_members=True)
+    async def warn(self, interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):
         try:
-            dm_embed = discord.Embed(
-                title="👢 Kicked - Monroe Social Club",
-                description=f"You have been kicked from Monroe Social Club.",
-                color=Config.COLORS["error"]
+            # Check permissions
+            if not interaction.user.guild_permissions.kick_members:
+                embed = create_error_embed("Permission Denied", "You don't have permission to warn users.")
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+
+            # Send DM to user
+            dm_sent = False
+            try:
+                dm_embed = discord.Embed(
+                    title="⚠️ Warning - Monroe Social Club",
+                    description=f"You have been warned in {interaction.guild.name}",
+                    color=Config.COLORS["warning"],
+                    timestamp=datetime.datetime.utcnow()
+                )
+                dm_embed.add_field(name="Reason", value=reason, inline=False)
+                dm_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
+                dm_embed.set_footer(text="Please follow server rules to avoid further action.")
+
+                await user.send(embed=dm_embed)
+                dm_sent = True
+            except Exception as e:
+                print(f"❌ Could not send DM to {user}: {e}")
+
+            # Create moderation log
+            log_embed = create_moderation_embed(
+                action="Warning",
+                target=user,
+                staff_member=interaction.user,
+                reason=reason,
+                color=Config.COLORS["warning"]
             )
-            dm_embed.add_field(name="Reason", value=reason, inline=False)
-            dm_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
-            dm_embed.set_footer(text="You can rejoin the server if you follow the rules.")
 
-            await member.send(embed=dm_embed)
-        except discord.Forbidden:
-            pass
-
-        # Kick the member
-        try:
-            await member.kick(reason=f"Kicked by {interaction.user} - {reason}")
-
-            # Log to moderation channel
+            # Send to moderation log channel
             log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
             if log_channel:
-                await log_channel.send(embed=embed)
+                await log_channel.send(embed=log_embed)
 
-            await interaction.response.send_message(f"👢 {member.mention} has been kicked for: {reason}", ephemeral=True)
-        except discord.Forbidden:
-            await interaction.response.send_message("❌ I don't have permission to kick this member.", ephemeral=True)
+            # Response to staff member
+            response = f"✅ {user.mention} has been warned for: {reason}"
+            if not dm_sent:
+                response += "\n⚠️ Could not send DM to user."
 
-    @app_commands.command(name="ban", description="Ban a member from the server")
-    @app_commands.describe(
-        member="The member to ban",
-        delete_days="Days of messages to delete (0-7)",
-        image="Optional image attachment"
-    )
-    async def ban(self, interaction: discord.Interaction, member: discord.Member, delete_days: int = 0, image: discord.Attachment = None):
-        if not self.has_staff_permissions(interaction.user):
-            await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
-            return
+            embed = create_success_embed("Warning Issued", response)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        if member.top_role >= interaction.user.top_role and not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message("❌ You cannot ban this member due to role hierarchy.", ephemeral=True)
-            return
+        except Exception as e:
+            print(f"❌ Error in warn command: {e}")
+            embed = create_error_embed("Command Error", f"An error occurred: {str(e)}")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        if delete_days < 0 or delete_days > 7:
-            await interaction.response.send_message("❌ Delete days must be between 0 and 7.", ephemeral=True)
-            return
+    @app_commands.command(name="kick", description="Kick a user from the server")
+    @app_commands.describe(user="The user to kick", reason="Reason for the kick")
+    @app_commands.default_permissions(kick_members=True)
+    async def kick(self, interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):
+        try:
+            # Check permissions
+            if not interaction.user.guild_permissions.kick_members:
+                embed = create_error_embed("Permission Denied", "You don't have permission to kick users.")
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
 
-        # Show rule selection interface
-        embed = discord.Embed(
-            title="🔨 Banning Member",
-            description=f"Select the rule violation for {member.mention}:",
-            color=Config.COLORS["error"]
-        )
+            # Send DM to user
+            try:
+                dm_embed = discord.Embed(
+                    title="👢 Kicked - Monroe Social Club",
+                    description=f"You have been kicked from {interaction.guild.name}",
+                    color=Config.COLORS["error"],
+                    timestamp=datetime.datetime.utcnow()
+                )
+                dm_embed.add_field(name="Reason", value=reason, inline=False)
+                dm_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
 
-        view = RuleViolationView("Ban", member, interaction.user, image)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+                await user.send(embed=dm_embed)
+            except Exception as e:
+                print(f"❌ Could not send DM to {user}: {e}")
+
+            # Kick the user
+            await user.kick(reason=f"Kicked by {interaction.user}: {reason}")
+
+            # Create moderation log
+            log_embed = create_moderation_embed(
+                action="Kick",
+                target=user,
+                staff_member=interaction.user,
+                reason=reason,
+                color=Config.COLORS["error"]
+            )
+
+            # Send to moderation log channel
+            log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
+            if log_channel:
+                await log_channel.send(embed=log_embed)
+
+            embed = create_success_embed("User Kicked", f"{user.mention} has been kicked for: {reason}")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            print(f"❌ Error in kick command: {e}")
+            embed = create_error_embed("Command Error", f"An error occurred: {str(e)}")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="ban", description="Ban a user from the server")
+    @app_commands.describe(user="The user to ban", reason="Reason for the ban")
+    @app_commands.default_permissions(ban_members=True)
+    async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):
+        try:
+            # Check permissions
+            if not interaction.user.guild_permissions.ban_members:
+                embed = create_error_embed("Permission Denied", "You don't have permission to ban users.")
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+
+            # Send DM to user
+            try:
+                dm_embed = discord.Embed(
+                    title="🔨 Banned - Monroe Social Club",
+                    description=f"You have been banned from {interaction.guild.name}",
+                    color=Config.COLORS["error"],
+                    timestamp=datetime.datetime.utcnow()
+                )
+                dm_embed.add_field(name="Reason", value=reason, inline=False)
+                dm_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
+
+                await user.send(embed=dm_embed)
+            except Exception as e:
+                print(f"❌ Could not send DM to {user}: {e}")
+
+            # Ban the user
+            await user.ban(reason=f"Banned by {interaction.user}: {reason}")
+
+            # Create moderation log
+            log_embed = create_moderation_embed(
+                action="Ban",
+                target=user,
+                staff_member=interaction.user,
+                reason=reason,
+                color=Config.COLORS["error"]
+            )
+
+            # Send to moderation log channel
+            log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
+            if log_channel:
+                await log_channel.send(embed=log_embed)
+
+            embed = create_success_embed("User Banned", f"{user.mention} has been banned for: {reason}")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            print(f"❌ Error in ban command: {e}")
+            embed = create_error_embed("Command Error", f"An error occurred: {str(e)}")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="announce", description="Send an announcement to the announcement channel")
     @app_commands.describe(message="The announcement message to send")
