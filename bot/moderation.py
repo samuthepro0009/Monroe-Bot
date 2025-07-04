@@ -250,7 +250,7 @@ class ModerationCog(commands.Cog):
             'ban_members': 'Ban Members', 
             'manage_messages': 'Manage Messages',
             'send_messages': 'Send Messages',
-            'use_slash_commands': 'Use Slash Commands'
+            'use_application_commands': 'Use Application Commands'
         }
         
         for perm_attr, perm_name in required_perms.items():

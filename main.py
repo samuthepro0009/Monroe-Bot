@@ -31,7 +31,7 @@ async def on_ready():
 async def load_cogs():
     cogs = [
         'bot.automod',
-        'bot.admin_logging', 
+        'bot.admin_logging',
         'bot.moderation',
         'bot.utils',
         'bot.suspicious_activity',
@@ -45,7 +45,7 @@ async def load_cogs():
         try:
             await bot.load_extension(cog)
             print(f'✅ Loaded {cog}')
-            
+
             # Check if moderation cog loaded correctly
             if cog == 'bot.moderation':
                 moderation_cog = bot.get_cog('ModerationCog')
@@ -71,19 +71,19 @@ async def on_ready():
     try:
         # Clear existing commands first
         bot.tree.clear_commands()
-        
+
         # Sync commands globally
         synced = await bot.tree.sync()
         print(f'🔄 Synced {len(synced)} command(s) globally')
-        
+
         # List all registered commands for debugging
         all_commands = bot.tree.get_commands()
         print(f'📋 Registered commands: {[cmd.name for cmd in all_commands]}')
-        
+
         # Check if moderation commands are there
         moderation_commands = [cmd.name for cmd in all_commands if cmd.name in ['warn', 'kick', 'ban']]
         print(f'⚔️ Moderation commands registered: {moderation_commands}')
-        
+
     except Exception as e:
         print(f'❌ Failed to sync commands: {e}')
         import traceback
@@ -132,10 +132,10 @@ async def start_health_server():
             })
         except Exception as e:
             return web.json_response({
-                "online": False, 
-                "serverCount": 0, 
-                "userCount": 0, 
-                "uptime": "Error", 
+                "online": False,
+                "serverCount": 0,
+                "userCount": 0,
+                "uptime": "Error",
                 "lastSeen": datetime.utcnow().isoformat()
             })
 
@@ -157,9 +157,9 @@ async def start_health_server():
                         channel = bot.get_channel(channel_id)
                         if channel and channel.guild == guild and channel.permissions_for(guild.me).send_messages:
                             embed = discord.Embed(
-                                title="📢 Monroe Bot Broadcast", 
-                                description=message, 
-                                color=0x7c3aed, 
+                                title="📢 Monroe Bot Broadcast",
+                                description=message,
+                                color=0x7c3aed,
                                 timestamp=datetime.utcnow()
                             )
                             embed.set_author(name=f"Sent by {dashboard_user}")
@@ -171,8 +171,8 @@ async def start_health_server():
                     print(f"❌ Broadcast error in guild {guild.name}: {e}")
 
             return web.json_response({
-                'success': True, 
-                'sent_to': sent_count, 
+                'success': True,
+                'sent_to': sent_count,
                 'message': f'Broadcast sent to {sent_count} channels'
             })
         except Exception as e:
@@ -191,9 +191,9 @@ async def start_health_server():
 
             sent_count = 0
             embed = discord.Embed(
-                title="🤔 Question of the Day", 
-                description=question, 
-                color=0xf59e0b, 
+                title="🤔 Question of the Day",
+                description=question,
+                color=0xf59e0b,
                 timestamp=datetime.utcnow()
             )
             embed.set_footer(text="Answer below! 🏖️")
@@ -223,8 +223,8 @@ async def start_health_server():
                     print(f"❌ QOTD error in guild {guild.name}: {e}")
 
             return web.json_response({
-                'success': True, 
-                'sent_to': sent_count, 
+                'success': True,
+                'sent_to': sent_count,
                 'message': f'QOTD sent to {sent_count} servers'
             })
         except Exception as e:
@@ -244,9 +244,9 @@ async def start_health_server():
 
             sent_count = 0
             embed = discord.Embed(
-                title=f"📢 {title}", 
-                description=content, 
-                color=0x7c3aed, 
+                title=f"📢 {title}",
+                description=content,
+                color=0x7c3aed,
                 timestamp=datetime.utcnow()
             )
             embed.set_author(name=f"Sent by {dashboard_user}")
@@ -263,8 +263,8 @@ async def start_health_server():
                     print(f"❌ Announcement error in guild {guild.name}: {e}")
 
             return web.json_response({
-                'success': True, 
-                'sent_to': sent_count, 
+                'success': True,
+                'sent_to': sent_count,
                 'message': f'Announcement sent to {sent_count} servers'
             })
         except Exception as e:
@@ -401,7 +401,7 @@ async def start_health_server():
     print(f"🌐 Monroe Bot API server listening on 0.0.0.0:{port}")
     print(f"✅ Health check: http://0.0.0.0:{port}/health")
     print(f"✅ API endpoints ready for dashboard connections")
-    
+
     # Generate invite link with proper permissions
     permissions = discord.Permissions(
         administrator=True,
@@ -409,18 +409,18 @@ async def start_health_server():
         manage_messages=True,
         kick_members=True,
         ban_members=True,
-        use_slash_commands=True,
+        use_application_commands=True,
         manage_roles=True,
         view_channel=True,
         read_message_history=True
     )
-    
+
     invite_link = discord.utils.oauth_url(
         client_id=bot.user.id,
         permissions=permissions,
         scopes=('bot', 'applications.commands')
     )
-    
+
     print(f"🔗 Invite link with proper permissions: {invite_link}")
 
 # Bot commands
@@ -434,23 +434,23 @@ async def check_permissions(ctx):
     if not ctx.author.guild_permissions.administrator:
         await ctx.send("❌ Solo gli amministratori possono usare questo comando.")
         return
-    
+
     bot_member = ctx.guild.get_member(bot.user.id)
     if not bot_member:
         await ctx.send("❌ Impossibile trovare il bot nel server.")
         return
-    
+
     perms = bot_member.guild_permissions
-    
+
     embed = discord.Embed(
         title="🔑 Permessi Bot",
         description="Controllo dei permessi del bot",
         color=0x00ff00 if perms.administrator else 0xff0000
     )
-    
+
     critical_perms = {
         "Administrator": perms.administrator,
-        "Use Slash Commands": perms.use_slash_commands,
+        "Use App Commands": perms.use_application_commands,
         "Send Messages": perms.send_messages,
         "Manage Messages": perms.manage_messages,
         "Kick Members": perms.kick_members,
@@ -459,21 +459,21 @@ async def check_permissions(ctx):
         "View Channels": perms.view_channel,
         "Read Message History": perms.read_message_history
     }
-    
+
     for perm_name, has_perm in critical_perms.items():
         embed.add_field(
             name=perm_name,
             value="✅ Sì" if has_perm else "❌ No",
             inline=True
         )
-    
+
     # Check if bot was invited with proper scopes
     embed.add_field(
         name="💡 Suggerimento",
         value="Se i comandi slash non funzionano, il bot potrebbe essere stato invitato senza lo scope `applications.commands`",
         inline=False
     )
-    
+
     await ctx.send(embed=embed)
 
 @bot.command(name='sync')
@@ -482,41 +482,41 @@ async def sync(ctx):
     if not ctx.author.guild_permissions.administrator:
         await ctx.send("❌ Solo gli amministratori possono usare questo comando.")
         return
-    
+
     try:
         # Clear and sync commands
         bot.tree.clear_commands()
         synced = await bot.tree.sync()
-        
+
         # Get all registered commands
         all_commands = bot.tree.get_commands()
         command_names = [cmd.name for cmd in all_commands]
-        
+
         embed = discord.Embed(
             title="🔄 Comandi Sincronizzati",
             description=f"Sincronizzati {len(synced)} comandi slash",
             color=0x00ff00
         )
-        
+
         if command_names:
             embed.add_field(
                 name="📋 Comandi Registrati",
                 value=", ".join(command_names),
                 inline=False
             )
-        
+
         # Check bot permissions
         bot_member = ctx.guild.get_member(bot.user.id)
         if bot_member:
             perms = bot_member.guild_permissions
             embed.add_field(
                 name="🔑 Permessi Bot",
-                value=f"Admin: {perms.administrator}\nUse Slash: {perms.use_slash_commands}\nManage Messages: {perms.manage_messages}",
+                value=f"Admin: {perms.administrator}\nUse App Commands: {perms.use_application_commands}\nManage Messages: {perms.manage_messages}",
                 inline=False
             )
-        
+
         await ctx.send(embed=embed)
-        
+
     except Exception as e:
         await ctx.send(f"❌ Errore nella sincronizzazione: {e}")
         import traceback
