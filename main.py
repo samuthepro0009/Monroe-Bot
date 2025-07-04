@@ -47,7 +47,7 @@ async def load_cogs():
                 if moderation_cog:
                     app_commands = getattr(moderation_cog, '__cog_app_commands__', [])
                     print(f'✅ Moderation cog loaded with {len(app_commands)} app commands: {[cmd.name for cmd in app_commands]}')
-                    
+
                     # Verify specific commands exist
                     command_names = [cmd.name for cmd in app_commands]
                     if 'warn' in command_names:
@@ -79,7 +79,7 @@ async def on_ready():
     try:
         # Clear existing commands first
         bot.tree.clear_commands(guild=None)
-        
+
         # Copy commands from cogs to the tree
         for cog_name, cog in bot.cogs.items():
             for command in getattr(cog, '__cog_app_commands__', []):
@@ -99,7 +99,7 @@ async def on_ready():
             print(f'✅ Successfully synced commands: {[cmd.name for cmd in synced]}')
         else:
             print('❌ No commands were synced - checking for issues...')
-            
+
             # Debug: Check individual cogs
             for cog_name, cog in bot.cogs.items():
                 cog_commands = getattr(cog, '__cog_app_commands__', [])
@@ -146,29 +146,30 @@ async def start_health_server():
         return None
 
     async def handle_login(request):
-        """Handle dashboard login with username/password"""
-        try:
-            data = await request.json()
-            username = data.get('username', '')
-            password = data.get('password', '')
-            
-            if not username or not password:
-                return web.json_response({'error': 'Username and password required'}, status=400)
-            
-            if credentials_manager.verify_credentials(username, password):
-                # In a real application, you'd generate a JWT token here
-                # For now, we'll return a simple success with the API secret
-                return web.json_response({
-                    'success': True,
-                    'message': 'Login successful',
-                    'token': API_SECRET,  # In production, generate unique tokens
-                    'username': username
-                })
-            else:
-                return web.json_response({'error': 'Invalid credentials'}, status=401)
-                
-        except Exception as e:
-            return web.json_response({'error': str(e)}, status=500)
+            """Handle dashboard login with username/password"""
+            try:
+                data = await request.json()
+                username = data.get('username', '')
+                password = data.get('password', '')
+
+                if not username or not password:
+                    return web.json_response({'error': 'Username and password required'}, status=400)
+
+                if credentials_manager.verify_credentials(username, password):
+                    print(f"✅ Dashboard login successful for user: {username}")
+                    return web.json_response({
+                        'success': True,
+                        'message': 'Login successful',
+                        'token': API_SECRET,  # In production, generate unique tokens
+                        'username': username
+                    })
+                else:
+                    print(f"❌ Dashboard login failed for user: {username}")
+                    return web.json_response({'error': 'Invalid username or password'}, status=401)
+
+            except Exception as e:
+                print(f"❌ Dashboard login error: {str(e)}")
+                return web.json_response({'error': 'Login system error'}, status=500)
 
     async def handle_health(request):
         return web.Response(text="Bot is running!")
@@ -420,7 +421,7 @@ async def start_health_server():
                         bot.get_channel(1353388676981456917),
                         bot.get_channel(1387524238117830776)
                     ]
-                    
+
                     logged_count = 0
                     for log_channel in log_channels:
                         if log_channel:
@@ -429,7 +430,7 @@ async def start_health_server():
                                 logged_count += 1
                             except Exception as e:
                                 print(f"Failed to send dashboard log to channel {log_channel.id}: {e}")
-                    
+
                     log_result = f"logged to {logged_count} channels" if logged_count > 0 else "log failed"
 
                     result = f"Warning issued to {member.display_name} ({dm_result}, {log_result})"
