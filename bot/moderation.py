@@ -236,12 +236,44 @@ class ModerationCog(commands.Cog):
         member_roles = [role.id for role in member.roles]
         return any(role_id in member_roles for role_id in staff_role_ids)
 
+    def check_bot_permissions(self, guild):
+        """Check if bot has necessary permissions"""
+        bot_member = guild.get_member(self.bot.user.id)
+        if not bot_member:
+            return False, "Bot non trovato nel server"
+        
+        perms = bot_member.guild_permissions
+        missing_perms = []
+        
+        required_perms = {
+            'kick_members': 'Kick Members',
+            'ban_members': 'Ban Members', 
+            'manage_messages': 'Manage Messages',
+            'send_messages': 'Send Messages',
+            'use_slash_commands': 'Use Slash Commands'
+        }
+        
+        for perm_attr, perm_name in required_perms.items():
+            if not getattr(perms, perm_attr, False):
+                missing_perms.append(perm_name)
+        
+        if missing_perms:
+            return False, f"Permessi mancanti: {', '.join(missing_perms)}"
+        
+        return True, "Tutti i permessi sono presenti"
+
     @app_commands.command(name="warn", description="Warn a member")
     @app_commands.describe(
         member="The member to warn",
         image="Optional image attachment"
     )
     async def warn(self, interaction: discord.Interaction, member: discord.Member, image: discord.Attachment = None):
+        # Check bot permissions first
+        has_perms, perm_msg = self.check_bot_permissions(interaction.guild)
+        if not has_perms:
+            await interaction.response.send_message(f"❌ Bot permission error: {perm_msg}", ephemeral=True)
+            return
+            
         if not self.has_staff_permissions(interaction.user):
             await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
             return

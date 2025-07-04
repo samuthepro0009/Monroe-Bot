@@ -67,12 +67,27 @@ async def on_ready():
     # Load cogs after bot is ready
     await load_cogs()
 
-    # Sync slash commands
+    # Sync slash commands with better error handling
     try:
+        # Clear existing commands first
+        bot.tree.clear_commands()
+        
+        # Sync commands globally
         synced = await bot.tree.sync()
-        print(f'🔄 Synced {len(synced)} command(s)')
+        print(f'🔄 Synced {len(synced)} command(s) globally')
+        
+        # List all registered commands for debugging
+        all_commands = bot.tree.get_commands()
+        print(f'📋 Registered commands: {[cmd.name for cmd in all_commands]}')
+        
+        # Check if moderation commands are there
+        moderation_commands = [cmd.name for cmd in all_commands if cmd.name in ['warn', 'kick', 'ban']]
+        print(f'⚔️ Moderation commands registered: {moderation_commands}')
+        
     except Exception as e:
         print(f'❌ Failed to sync commands: {e}')
+        import traceback
+        traceback.print_exc()
 
 async def start_health_server():
     """Complete API server with all endpoints for Monroe Dashboard"""
@@ -386,11 +401,80 @@ async def start_health_server():
     print(f"🌐 Monroe Bot API server listening on 0.0.0.0:{port}")
     print(f"✅ Health check: http://0.0.0.0:{port}/health")
     print(f"✅ API endpoints ready for dashboard connections")
+    
+    # Generate invite link with proper permissions
+    permissions = discord.Permissions(
+        administrator=True,
+        send_messages=True,
+        manage_messages=True,
+        kick_members=True,
+        ban_members=True,
+        use_slash_commands=True,
+        manage_roles=True,
+        view_channel=True,
+        read_message_history=True
+    )
+    
+    invite_link = discord.utils.oauth_url(
+        client_id=bot.user.id,
+        permissions=permissions,
+        scopes=('bot', 'applications.commands')
+    )
+    
+    print(f"🔗 Invite link with proper permissions: {invite_link}")
 
 # Bot commands
 @bot.command(name='ping')
 async def ping(ctx):
     await ctx.send('🏓 Pong!')
+
+@bot.command(name='checkperms')
+async def check_permissions(ctx):
+    """Check bot permissions (admin only)"""
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.send("❌ Solo gli amministratori possono usare questo comando.")
+        return
+    
+    bot_member = ctx.guild.get_member(bot.user.id)
+    if not bot_member:
+        await ctx.send("❌ Impossibile trovare il bot nel server.")
+        return
+    
+    perms = bot_member.guild_permissions
+    
+    embed = discord.Embed(
+        title="🔑 Permessi Bot",
+        description="Controllo dei permessi del bot",
+        color=0x00ff00 if perms.administrator else 0xff0000
+    )
+    
+    critical_perms = {
+        "Administrator": perms.administrator,
+        "Use Slash Commands": perms.use_slash_commands,
+        "Send Messages": perms.send_messages,
+        "Manage Messages": perms.manage_messages,
+        "Kick Members": perms.kick_members,
+        "Ban Members": perms.ban_members,
+        "Manage Roles": perms.manage_roles,
+        "View Channels": perms.view_channel,
+        "Read Message History": perms.read_message_history
+    }
+    
+    for perm_name, has_perm in critical_perms.items():
+        embed.add_field(
+            name=perm_name,
+            value="✅ Sì" if has_perm else "❌ No",
+            inline=True
+        )
+    
+    # Check if bot was invited with proper scopes
+    embed.add_field(
+        name="💡 Suggerimento",
+        value="Se i comandi slash non funzionano, il bot potrebbe essere stato invitato senza lo scope `applications.commands`",
+        inline=False
+    )
+    
+    await ctx.send(embed=embed)
 
 @bot.command(name='sync')
 async def sync(ctx):
@@ -400,10 +484,43 @@ async def sync(ctx):
         return
     
     try:
+        # Clear and sync commands
+        bot.tree.clear_commands()
         synced = await bot.tree.sync()
-        await ctx.send(f"✅ Sincronizzati {len(synced)} comandi slash!")
+        
+        # Get all registered commands
+        all_commands = bot.tree.get_commands()
+        command_names = [cmd.name for cmd in all_commands]
+        
+        embed = discord.Embed(
+            title="🔄 Comandi Sincronizzati",
+            description=f"Sincronizzati {len(synced)} comandi slash",
+            color=0x00ff00
+        )
+        
+        if command_names:
+            embed.add_field(
+                name="📋 Comandi Registrati",
+                value=", ".join(command_names),
+                inline=False
+            )
+        
+        # Check bot permissions
+        bot_member = ctx.guild.get_member(bot.user.id)
+        if bot_member:
+            perms = bot_member.guild_permissions
+            embed.add_field(
+                name="🔑 Permessi Bot",
+                value=f"Admin: {perms.administrator}\nUse Slash: {perms.use_slash_commands}\nManage Messages: {perms.manage_messages}",
+                inline=False
+            )
+        
+        await ctx.send(embed=embed)
+        
     except Exception as e:
         await ctx.send(f"❌ Errore nella sincronizzazione: {e}")
+        import traceback
+        traceback.print_exc()
 
 async def main():
     """Main function to start both bot and server"""
