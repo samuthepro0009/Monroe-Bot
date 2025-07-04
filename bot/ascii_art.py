@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -8,7 +7,7 @@ import random
 class ASCIIArtCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        
+
         # 80s Beach Club themed ASCII art
         self.ascii_art = {
             'palm_tree': """
@@ -97,9 +96,38 @@ class ASCIIArtCog(commands.Cog):
   ║  👑 Premium Members ║
   ║  🌟 Special Events  ║
   ╚════════════════════╝
-```"""
+```""",
+            "server": """
+╔═══════════════════════════════════╗
+║      🏖️  MONROE SOCIAL CLUB  🏖️    ║
+║                                   ║
+║     Your 80s Beach Paradise!     ║
+║                                   ║
+║  🌴 Welcome to the Club! 🌴       ║
+╚═══════════════════════════════════╝
+        """,
+            "uptime": """
+╔═══════════════════════════════════╗
+║        🤖 24/7 BOT STATUS 🤖      ║
+║                                   ║
+║   ⚡ Always Online • Render ⚡    ║
+║                                   ║
+║  🛡️ Your Paradise is Protected 🛡️ ║
+╚═══════════════════════════════════╝
+        """,
+            "render": """
+╔═══════════════════════════════════╗
+║       🌐 POWERED BY RENDER 🌐     ║
+║                                   ║
+║    ⚡ 24/7 Cloud Hosting ⚡       ║
+║    🔄 Automatic Deployments 🔄    ║
+║    📈 Scalable Infrastructure 📈  ║
+║                                   ║
+║   🏖️ Monroe Social Club 🏖️        ║
+╚═══════════════════════════════════╝
+        """
         }
-        
+
         # Random beach quotes
         self.beach_quotes = [
             "Life's a beach, enjoy the waves! 🌊",
@@ -111,13 +139,13 @@ class ASCIIArtCog(commands.Cog):
             "Sun, sand, and 80s jams 🎵",
             "Neon nights and beach lights ✨"
         ]
-    
+
     def has_management_permissions(self, member):
         """Check if member has management permissions"""
         management_role_names = list(Config.MANAGEMENT_ROLES.keys())
         member_roles = [role.name for role in member.roles]
         return any(role in management_role_names for role in member_roles) or member.guild_permissions.manage_guild
-    
+
     @app_commands.command(name="ascii", description="Display ASCII art")
     @app_commands.describe(art_type="Type of ASCII art to display")
     @app_commands.choices(art_type=[
@@ -136,27 +164,27 @@ class ASCIIArtCog(commands.Cog):
         if art_type in self.ascii_art:
             art = self.ascii_art[art_type]
             quote = random.choice(self.beach_quotes)
-            
+
             embed = discord.Embed(
                 title="🎨 Monroe Social Club ASCII Art",
                 description=f"{art}\n\n*{quote}*",
                 color=Config.COLORS["pink"]
             )
             embed.set_footer(text="Monroe Social Club - 80s Beach Vibes")
-            
+
             await interaction.response.send_message(embed=embed)
         else:
             await interaction.response.send_message("❌ ASCII art not found!", ephemeral=True)
-    
+
     @app_commands.command(name="welcome_art", description="Display welcome ASCII art (Management only)")
     async def welcome_art(self, interaction: discord.Interaction):
         """Display welcome ASCII art"""
         if not self.has_management_permissions(interaction.user):
             await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
             return
-        
+
         art = self.ascii_art['neon_welcome']
-        
+
         embed = discord.Embed(
             title="🌴 Welcome to Monroe Social Club! 🌴",
             description=art,
@@ -168,9 +196,9 @@ class ASCIIArtCog(commands.Cog):
             inline=False
         )
         embed.set_footer(text="Monroe Social Club - Where the 80s Never Ended!")
-        
+
         await interaction.response.send_message(embed=embed)
-    
+
     @app_commands.command(name="random_ascii", description="Display random ASCII art")
     async def random_ascii(self, interaction: discord.Interaction):
         """Display random ASCII art"""
@@ -179,14 +207,14 @@ class ASCIIArtCog(commands.Cog):
         art_type = random.choice(list(available_art.keys()))
         art = available_art[art_type]
         quote = random.choice(self.beach_quotes)
-        
+
         embed = discord.Embed(
             title=f"🎨 Random ASCII Art - {art_type.replace('_', ' ').title()}",
             description=f"{art}\n\n*{quote}*",
             color=Config.COLORS["pink"]
         )
         embed.set_footer(text="Monroe Social Club - 80s Beach Vibes")
-        
+
         await interaction.response.send_message(embed=embed)
 
 async def setup(bot):
