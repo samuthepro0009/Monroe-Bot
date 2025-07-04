@@ -44,7 +44,15 @@ async def load_cogs():
             if cog == 'bot.moderation':
                 moderation_cog = bot.get_cog('ModerationCog')
                 if moderation_cog:
-                    print(f'✅ Moderation cog loaded with commands: {[cmd.name for cmd in moderation_cog.get_app_commands()]}')
+                    app_commands = getattr(moderation_cog, '__cog_app_commands__', [])
+                    print(f'✅ Moderation cog loaded with {len(app_commands)} app commands: {[cmd.name for cmd in app_commands]}')
+                    
+                    # Verify specific commands exist
+                    command_names = [cmd.name for cmd in app_commands]
+                    if 'warn' in command_names:
+                        print(f'✅ Warn command found and ready')
+                    else:
+                        print(f'❌ Warn command NOT found in app commands')
                 else:
                     print(f'❌ Moderation cog not found after loading')
         except Exception as e:
@@ -52,31 +60,53 @@ async def load_cogs():
             import traceback
             traceback.print_exc()
 
+# Load cogs immediately when bot starts
+async def setup_bot():
+    """Setup function to load cogs before starting bot"""
+    await load_cogs()
+
 @bot.event
 async def on_ready():
     print(f'🌴 {bot.user} has connected to Discord!')
     print(f'🏖️ Connected to {len(bot.guilds)} servers')
     bot.start_time = datetime.utcnow()
 
-    # Load cogs after bot is ready
+    # Load cogs first
     await load_cogs()
+
+    # Wait a moment for cogs to fully initialize
+    await asyncio.sleep(2)
 
     # Sync slash commands with better error handling
     try:
-        # Clear existing commands first (guild=None means global commands)
+        # Clear existing commands first
         bot.tree.clear_commands(guild=None)
+        
+        # Copy commands from cogs to the tree
+        for cog_name, cog in bot.cogs.items():
+            for command in getattr(cog, '__cog_app_commands__', []):
+                bot.tree.add_command(command)
+                print(f'➕ Added command: {command.name} from {cog_name}')
+
+        # List all registered commands for debugging BEFORE sync
+        all_commands = bot.tree.get_commands()
+        print(f'📋 Commands ready to sync: {[cmd.name for cmd in all_commands]}')
 
         # Sync commands globally
         synced = await bot.tree.sync()
         print(f'🔄 Synced {len(synced)} command(s) globally')
 
-        # List all registered commands for debugging
-        all_commands = bot.tree.get_commands()
-        print(f'📋 Registered commands: {[cmd.name for cmd in all_commands]}')
-
-        # Check if moderation commands are there
-        moderation_commands = [cmd.name for cmd in all_commands if cmd.name in ['warn', 'kick', 'ban']]
-        print(f'⚔️ Moderation commands registered: {moderation_commands}')
+        # Verify sync worked
+        if len(synced) > 0:
+            print(f'✅ Successfully synced commands: {[cmd["name"] for cmd in synced]}')
+        else:
+            print('❌ No commands were synced - checking for issues...')
+            
+            # Debug: Check individual cogs
+            for cog_name, cog in bot.cogs.items():
+                cog_commands = getattr(cog, '__cog_app_commands__', [])
+                if cog_commands:
+                    print(f'🔍 {cog_name} has {len(cog_commands)} commands: {[cmd.name for cmd in cog_commands]}')
 
     except Exception as e:
         print(f'❌ Failed to sync commands: {e}')
@@ -525,6 +555,9 @@ async def main():
 
     # Start the health server
     await start_health_server()
+
+    # Setup bot with cogs loaded
+    await setup_bot()
 
     # Start the bot
     print("🔌 Connecting to Discord...")

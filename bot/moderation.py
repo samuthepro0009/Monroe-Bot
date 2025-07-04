@@ -228,6 +228,22 @@ class ModerationCog(commands.Cog):
 
     async def cog_load(self):
         print(f"🛡️ ModerationCog loaded successfully")
+        
+        # Debug: Print all app commands in this cog
+        app_commands = getattr(self, '__cog_app_commands__', [])
+        print(f"🛡️ ModerationCog has {len(app_commands)} app commands: {[cmd.name for cmd in app_commands]}")
+        
+        # Verify warn command exists
+        warn_cmd = None
+        for cmd in app_commands:
+            if cmd.name == 'warn':
+                warn_cmd = cmd
+                break
+                
+        if warn_cmd:
+            print(f"🛡️ Warn command found: {warn_cmd.name} - {warn_cmd.description}")
+        else:
+            print(f"❌ Warn command NOT found in cog app commands")
 
     @app_commands.command(name="warn", description="Warn a user")
     @app_commands.describe(user="The user to warn", reason="Reason for the warning")
