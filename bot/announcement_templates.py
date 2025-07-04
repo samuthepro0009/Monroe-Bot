@@ -6,6 +6,141 @@ from bot.config import Config
 import json
 import os
 
+class AnnouncementTemplates(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @app_commands.command(name="addrules", description="Add server rules to a channel")
+    @app_commands.describe(channel="Channel to send rules to")
+    async def add_rules(self, interaction: discord.Interaction, channel: discord.TextChannel = None):
+        """Add comprehensive server rules to specified channel"""
+        
+        # Check if user has permission (admin or manage_guild)
+        if not interaction.user.guild_permissions.administrator and not interaction.user.guild_permissions.manage_guild:
+            await interaction.response.send_message("❌ You need administrator permissions to use this command.", ephemeral=True)
+            return
+
+        target_channel = channel or interaction.channel
+
+        # Create rules embed
+        embed = discord.Embed(
+            title="📋 Monroe Social Club - Server Rules",
+            description="Welcome to Monroe Social Club! Please read and follow these rules to maintain our retro 80s beach paradise. 🏖️",
+            color=Config.COLORS["info"],
+            timestamp=discord.utils.utcnow()
+        )
+
+        # Add rules by severity
+        severity_1_rules = []
+        severity_2_rules = []
+        severity_3_rules = []
+
+        for rule_code, rule_desc in Config.SERVER_RULES.items():
+            if rule_code.startswith("1."):
+                severity_1_rules.append(f"**{rule_code}** - {rule_desc}")
+            elif rule_code.startswith("2."):
+                severity_2_rules.append(f"**{rule_code}** - {rule_desc}")
+            elif rule_code.startswith("3."):
+                severity_3_rules.append(f"**{rule_code}** - {rule_desc}")
+
+        # Add severity 1 rules
+        embed.add_field(
+            name="🟡 Severity 1 - Minor Infractions",
+            value="\n".join(severity_1_rules[:10]) + ("..." if len(severity_1_rules) > 10 else ""),
+            inline=False
+        )
+
+        # Add severity 2 rules  
+        embed.add_field(
+            name="🟠 Severity 2 - Moderate Infractions", 
+            value="\n".join(severity_2_rules[:10]) + ("..." if len(severity_2_rules) > 10 else ""),
+            inline=False
+        )
+
+        # Add severity 3 rules
+        embed.add_field(
+            name="🔴 Severity 3 - Serious Infractions",
+            value="\n".join(severity_3_rules[:10]) + ("..." if len(severity_3_rules) > 10 else ""),
+            inline=False
+        )
+
+        embed.add_field(
+            name="🏖️ Remember",
+            value="Monroe Social Club is a place for fun, friendship, and 80s nostalgia. Let's keep it groovy! 🌴",
+            inline=False
+        )
+
+        embed.set_footer(text="Rules enforced by Monroe Social Club Staff • Stay rad! 🕶️")
+
+        try:
+            await target_channel.send(embed=embed)
+            await interaction.response.send_message(f"✅ Rules successfully posted to {target_channel.mention}!", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message(f"❌ I don't have permission to send messages in {target_channel.mention}.", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
+
+    @app_commands.command(name="template", description="Create an announcement using a template")
+    @app_commands.describe(
+        template_type="Type of announcement template",
+        title="Custom title for the announcement",
+        content="Content of the announcement",
+        channel="Channel to send to (optional)"
+    )
+    @app_commands.choices(template_type=[
+        app_commands.Choice(name="Event", value="event"),
+        app_commands.Choice(name="Update", value="update"),
+        app_commands.Choice(name="Maintenance", value="maintenance"),
+        app_commands.Choice(name="Celebration", value="celebration"),
+        app_commands.Choice(name="Welcome", value="welcome"),
+        app_commands.Choice(name="Rules", value="rules"),
+        app_commands.Choice(name="Partnership", value="partnership"),
+        app_commands.Choice(name="Giveaway", value="giveaway")
+    ])
+    async def create_template(self, interaction: discord.Interaction, template_type: str, title: str, content: str, channel: discord.TextChannel = None):
+        """Create an announcement using predefined templates"""
+        
+        # Check permissions
+        if not interaction.user.guild_permissions.administrator and not interaction.user.guild_permissions.manage_guild:
+            await interaction.response.send_message("❌ You need administrator permissions to use this command.", ephemeral=True)
+            return
+
+        target_channel = channel or interaction.channel
+        template = Config.ANNOUNCEMENT_TEMPLATES.get(template_type)
+        
+        if not template:
+            await interaction.response.send_message("❌ Invalid template type.", ephemeral=True)
+            return
+
+        # Create embed with template styling
+        embed = discord.Embed(
+            title=f"{template['emoji']} {title}",
+            description=content,
+            color=template['color'],
+            timestamp=discord.utils.utcnow()
+        )
+        
+        embed.set_author(
+            name=f"Monroe Social Club {template['title']}", 
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else None
+        )
+        
+        embed.set_footer(
+            text=f"Posted by {interaction.user.display_name} • 80s Beach Vibes 🏖️",
+            icon_url=interaction.user.display_avatar.url
+        )
+
+        try:
+            await target_channel.send(embed=embed)
+            await interaction.response.send_message(f"✅ {template['title']} posted to {target_channel.mention}!", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message(f"❌ I don't have permission to send messages in {target_channel.mention}.", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
+
+async def setup(bot):
+    await bot.add_cog(AnnouncementTemplates(bot))
+
 class AnnouncementTemplateModal(discord.ui.Modal):
     def __init__(self, template_name, template_data=None):
         super().__init__(title=f"{'Edit' if template_data else 'Create'} Template: {template_name}")
