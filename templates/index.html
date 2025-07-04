@@ -353,6 +353,31 @@
             <div class="command-grid">
                 <div class="command-btn" onclick="executeCommand('warn')">
                     <h4>/warn</h4>
+                    <p>Warn a user</p>
+                </div>
+                <div class="command-btn" onclick="executeCommand('kick')">
+                    <h4>/kick</h4>
+                    <p>Kick a user from server</p>
+                </div>
+                <div class="command-btn" onclick="executeCommand('ban')">
+                    <h4>/ban</h4>
+                    <p>Ban a user from server</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="command-section">
+            <h3>📊 Bot Information</h3>
+            <div class="command-grid">
+                <div class="command-btn" onclick="checkBotStatus()">
+                    <h4>Refresh Status</h4>
+                    <p>Update bot status information</p>
+                </div>
+            </div>
+        </div>
+    </div>grid">
+                <div class="command-btn" onclick="executeCommand('warn')">
+                    <h4>/warn</h4>
                     <p>Warn a member</p>
                 </div>
                 <div class="command-btn" onclick="executeCommand('kick')">
@@ -391,7 +416,17 @@
         // Check bot status on page load
         async function checkBotStatus() {
             try {
-                const response = await fetch('/api/status');
+                const response = await fetch('/api/status', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
                 const statusDot = document.getElementById('status-dot');
@@ -408,13 +443,14 @@
                     statusDetails.textContent = 'Bot is currently offline';
                 }
             } catch (error) {
+                console.error('Status check failed:', error);
                 const statusDot = document.getElementById('status-dot');
                 const statusText = document.getElementById('status-text');
                 const statusDetails = document.getElementById('status-details');
                 
                 statusDot.className = 'status-dot offline';
                 statusText.textContent = 'Error';
-                statusDetails.textContent = 'Unable to fetch status';
+                statusDetails.textContent = 'Unable to fetch status - Check console for details';
             }
         }
 
@@ -451,12 +487,124 @@
             document.getElementById('dashboard').style.display = 'none';
         }
 
-        function executeCommand(command) {
-            // Simulate command execution
-            alert(`Executing command: /${command}\n\nThis would trigger the bot command in a real implementation.`);
+        async function executeCommand(command) {
+            if (!isLoggedIn) {
+                alert('Please log in first!');
+                return;
+            }
+
+            const apiSecret = 'default-secret'; // This should match your API_SECRET in main.py
+            
+            try {
+                let response;
+                let requestData = {
+                    dashboard_user: 'Samu'
+                };
+
+                switch(command) {
+                    case 'announcement':
+                        const title = prompt('Enter announcement title:');
+                        const content = prompt('Enter announcement content:');
+                        if (!title || !content) {
+                            alert('Title and content are required!');
+                            return;
+                        }
+                        requestData.title = title;
+                        requestData.content = content;
+                        response = await fetch('/api/announcement', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiSecret}`
+                            },
+                            body: JSON.stringify(requestData)
+                        });
+                        break;
+                        
+                    case 'broadcast':
+                        const message = prompt('Enter broadcast message:');
+                        if (!message) {
+                            alert('Message is required!');
+                            return;
+                        }
+                        requestData.message = message;
+                        response = await fetch('/api/broadcast', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiSecret}`
+                            },
+                            body: JSON.stringify(requestData)
+                        });
+                        break;
+                        
+                    case 'qotd':
+                        const question = prompt('Enter question of the day:');
+                        if (!question) {
+                            alert('Question is required!');
+                            return;
+                        }
+                        requestData.question = question;
+                        response = await fetch('/api/qotd', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiSecret}`
+                            },
+                            body: JSON.stringify(requestData)
+                        });
+                        break;
+                        
+                    case 'warn':
+                    case 'kick':
+                    case 'ban':
+                        const userId = prompt('Enter user ID:');
+                        const reason = prompt('Enter reason:');
+                        if (!userId || !reason) {
+                            alert('User ID and reason are required!');
+                            return;
+                        }
+                        requestData.action = command;
+                        requestData.user_id = userId;
+                        requestData.reason = reason;
+                        response = await fetch('/api/moderation', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiSecret}`
+                            },
+                            body: JSON.stringify(requestData)
+                        });
+                        break;
+                        
+                    default:
+                        alert(`Command /${command} not implemented yet.`);
+                        return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ Success: ${result.message}`);
+                } else {
+                    alert(`❌ Error: ${result.error || 'Unknown error'}`);
+                }
+                
+            } catch (error) {
+                console.error('Command execution failed:', error);
+                alert(`❌ Failed to execute command: ${error.message}`);
+            }
         }
 
         // Check status on page load and every 30 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            checkBotStatus();
+            setInterval(checkBotStatus, 30000); // Check every 30 seconds
+        });
         checkBotStatus();
         setInterval(checkBotStatus, 30000);
 
