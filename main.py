@@ -34,7 +34,8 @@ async def load_cogs():
         'bot.suspicious_activity',
         'bot.announcement_templates',
         'bot.ascii_art',
-        'bot.activity_leaderboard'
+        'bot.activity_leaderboard',
+        'bot.keep_alive'
     ]
     
     for cog in cogs:

@@ -11,7 +11,7 @@ class RuleViolationSelect(discord.ui.Select):
         self.target = target
         self.staff_member = staff_member
         self.image = image
-        
+
         options = []
         for rule_id, rule_desc in Config.SERVER_RULES.items():
             options.append(discord.SelectOption(
@@ -19,16 +19,16 @@ class RuleViolationSelect(discord.ui.Select):
                 description=rule_desc.split(' - ')[1][:100] if ' - ' in rule_desc else rule_desc[:100],
                 value=rule_id
             ))
-        
+
         # Add "Other" option
         options.append(discord.SelectOption(
             label="Other",
             description="Custom violation reason",
             value="other"
         ))
-        
+
         super().__init__(placeholder="Select rule violations (can select multiple)...", options=options, min_values=1, max_values=len(options))
-    
+
     async def callback(self, interaction: discord.Interaction):
         if "other" in self.values:
             modal = CustomReasonModal(self.action_type, self.target, self.staff_member, self.image, self.values)
@@ -40,7 +40,7 @@ class RuleViolationSelect(discord.ui.Select):
                 reasons.append(f"{rule_id} - {Config.SERVER_RULES[rule_id]}")
             reason = " | ".join(reasons)
             await self.execute_moderation_action(interaction, reason)
-    
+
     async def execute_moderation_action(self, interaction, reason):
         if self.action_type == "Warning":
             color = Config.COLORS["warning"]
@@ -51,7 +51,7 @@ class RuleViolationSelect(discord.ui.Select):
             except discord.Forbidden:
                 await interaction.response.send_message("❌ I don't have permission to ban this user.", ephemeral=True)
                 return
-        
+
         # Create moderation embed
         embed = create_moderation_embed(
             action=self.action_type,
@@ -60,15 +60,15 @@ class RuleViolationSelect(discord.ui.Select):
             reason=reason,
             color=color
         )
-        
+
         if self.image:
             embed.set_image(url=self.image.url)
-        
+
         # Log to moderation channel
         log_channel = interaction.client.get_channel(Config.MODERATION_LOG_CHANNEL)
         if log_channel:
             await log_channel.send(embed=embed)
-        
+
         # Send DM to user
         try:
             if self.action_type == "Warning":
@@ -83,15 +83,15 @@ class RuleViolationSelect(discord.ui.Select):
                     description=f"You have been banned from Monroe Social Club.",
                     color=color
                 )
-            
+
             dm_embed.add_field(name="Reason", value=reason, inline=False)
             dm_embed.add_field(name="Staff Member", value=self.staff_member.mention, inline=True)
             dm_embed.set_footer(text="Please follow server rules to avoid further action.")
-            
+
             await self.target.send(embed=dm_embed)
         except discord.Forbidden:
             pass
-        
+
         await interaction.response.send_message(f"✅ {self.target.mention} has been {self.action_type.lower()}ed for: {reason}", ephemeral=True)
 
 class CustomReasonModal(discord.ui.Modal):
@@ -102,7 +102,7 @@ class CustomReasonModal(discord.ui.Modal):
         self.staff_member = staff_member
         self.image = image
         self.selected_rules = selected_rules or []
-        
+
         self.reason_input = discord.ui.TextInput(
             label="Other Motivation",
             placeholder="Enter the custom reason for this action...",
@@ -111,19 +111,19 @@ class CustomReasonModal(discord.ui.Modal):
             max_length=1000
         )
         self.add_item(self.reason_input)
-    
+
     async def on_submit(self, interaction: discord.Interaction):
         # Combine selected rules with custom reason
         reasons = []
         for rule_id in self.selected_rules:
             if rule_id != "other":
                 reasons.append(f"{rule_id} - {Config.SERVER_RULES[rule_id]}")
-        
+
         if reasons:
             reason = " | ".join(reasons) + f" | Other - {self.reason_input.value}"
         else:
             reason = f"Other - {self.reason_input.value}"
-        
+
         if self.action_type == "Warning":
             color = Config.COLORS["warning"]
         elif self.action_type == "Ban":
@@ -133,7 +133,7 @@ class CustomReasonModal(discord.ui.Modal):
             except discord.Forbidden:
                 await interaction.response.send_message("❌ I don't have permission to ban this user.", ephemeral=True)
                 return
-        
+
         # Create moderation embed
         embed = create_moderation_embed(
             action=self.action_type,
@@ -142,15 +142,15 @@ class CustomReasonModal(discord.ui.Modal):
             reason=reason,
             color=color
         )
-        
+
         if self.image:
             embed.set_image(url=self.image.url)
-        
+
         # Log to moderation channel
         log_channel = interaction.client.get_channel(Config.MODERATION_LOG_CHANNEL)
         if log_channel:
             await log_channel.send(embed=embed)
-        
+
         # Send DM to user
         try:
             if self.action_type == "Warning":
@@ -165,15 +165,15 @@ class CustomReasonModal(discord.ui.Modal):
                     description=f"You have been banned from Monroe Social Club.",
                     color=color
                 )
-            
+
             dm_embed.add_field(name="Reason", value=reason, inline=False)
             dm_embed.add_field(name="Staff Member", value=self.staff_member.mention, inline=True)
             dm_embed.set_footer(text="Please follow server rules to avoid further action.")
-            
+
             await self.target.send(embed=dm_embed)
         except discord.Forbidden:
             pass
-        
+
         await interaction.response.send_message(f"✅ {self.target.mention} has been {self.action_type.lower()}ed for: {reason}", ephemeral=True)
 
 class RuleViolationView(discord.ui.View):
@@ -184,17 +184,17 @@ class RuleViolationView(discord.ui.View):
 class ClearApplicationsView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=300)
-    
+
     @discord.ui.button(label="Confirm Clear", style=discord.ButtonStyle.danger, emoji="🗑️")
     async def confirm_clear(self, interaction: discord.Interaction, button: discord.ui.Button):
         log_channel = interaction.client.get_channel(Config.APPLICATION_LOG_CHANNEL)
-        
+
         await interaction.response.defer(ephemeral=True)
-        
+
         try:
             # Delete all messages in the application log channel
             deleted = await log_channel.purge(limit=None)
-            
+
             # Send confirmation
             embed = discord.Embed(
                 title="✅ Applications Database Cleared",
@@ -207,11 +207,11 @@ class ClearApplicationsView(discord.ui.View):
                 inline=True
             )
             embed.timestamp = discord.utils.utcnow()
-            
+
             await interaction.followup.send(embed=embed, ephemeral=True)
         except discord.Forbidden:
             await interaction.followup.send("❌ I don't have permission to delete messages in the application channel.", ephemeral=True)
-    
+
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="❌")
     async def cancel_clear(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
@@ -230,7 +230,7 @@ class ModerationCog(commands.Cog):
         # Check for administrator permission or specific staff roles
         if member.guild_permissions.administrator:
             return True
-        
+
         # Check staff roles (configure these in config.py)
         staff_role_ids = Config.STAFF_ROLES
         member_roles = [role.id for role in member.roles]
@@ -252,7 +252,7 @@ class ModerationCog(commands.Cog):
             description=f"Select the rule violation for {member.mention}:",
             color=Config.COLORS["warning"]
         )
-        
+
         view = RuleViolationView("Warning", member, interaction.user, image)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
@@ -279,7 +279,7 @@ class ModerationCog(commands.Cog):
             reason=reason,
             color=Config.COLORS["error"]
         )
-        
+
         if image:
             embed.set_image(url=image.url)
 
@@ -293,7 +293,7 @@ class ModerationCog(commands.Cog):
             dm_embed.add_field(name="Reason", value=reason, inline=False)
             dm_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
             dm_embed.set_footer(text="You can rejoin the server if you follow the rules.")
-            
+
             await member.send(embed=dm_embed)
         except discord.Forbidden:
             pass
@@ -301,7 +301,7 @@ class ModerationCog(commands.Cog):
         # Kick the member
         try:
             await member.kick(reason=f"Kicked by {interaction.user} - {reason}")
-            
+
             # Log to moderation channel
             log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
             if log_channel:
@@ -336,7 +336,7 @@ class ModerationCog(commands.Cog):
             description=f"Select the rule violation for {member.mention}:",
             color=Config.COLORS["error"]
         )
-        
+
         view = RuleViolationView("Ban", member, interaction.user, image)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
@@ -425,10 +425,10 @@ class ModerationCog(commands.Cog):
         try:
             # Get the banned user
             banned_user = await self.bot.fetch_user(user_id)
-            
+
             # Unban the user
             await interaction.guild.unban(banned_user, reason=f"Unbanned by {interaction.user} - {reason}")
-            
+
             # Create unban embed
             embed = create_moderation_embed(
                 action="Unban",
@@ -437,7 +437,7 @@ class ModerationCog(commands.Cog):
                 reason=reason,
                 color=Config.COLORS["success"]
             )
-            
+
             # Log to moderation channel
             log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
             if log_channel:
@@ -483,7 +483,7 @@ class ModerationCog(commands.Cog):
             dm_embed.add_field(name="Reason", value=reason, inline=False)
             dm_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
             dm_embed.set_footer(text="Keep up the good behavior!")
-            
+
             await member.send(embed=dm_embed)
         except discord.Forbidden:
             pass  # User has DMs disabled
@@ -509,29 +509,29 @@ class ModerationCog(commands.Cog):
         try:
             # Delete messages
             deleted = await interaction.channel.purge(limit=amount)
-            
+
             # Create clear embed for logging
             embed = discord.Embed(
                 title="🧹 Messages Cleared - Monroe Social Club",
                 description=f"Messages cleared in {interaction.channel.mention}",
                 color=Config.COLORS["warning"]
             )
-            
+
             embed.add_field(
                 name="👮 Staff Member",
                 value=f"**Staff:** {interaction.user.mention}\n**Username:** {interaction.user.name}#{interaction.user.discriminator}\n**User ID:** {interaction.user.id}",
                 inline=True
             )
-            
+
             embed.add_field(
                 name="📝 Clear Details",
                 value=f"**Messages Deleted:** {len(deleted)}\n**Channel:** {interaction.channel.mention}\n**Reason:** {reason}",
                 inline=False
             )
-            
+
             embed.set_footer(text="Monroe Social Club - Moderation System", icon_url=interaction.user.avatar.url if interaction.user.avatar else interaction.user.default_avatar.url)
             embed.timestamp = discord.utils.utcnow()
-            
+
             # Log to moderation channel
             log_channel = self.bot.get_channel(Config.MODERATION_LOG_CHANNEL)
             if log_channel:
@@ -564,33 +564,33 @@ class ModerationCog(commands.Cog):
             description="Join us for an exciting event at Monroe Social Club!",
             color=Config.COLORS["pink"]
         )
-        
+
         embed.add_field(
             name="⏰ Event Time",
             value=time,
             inline=True
         )
-        
+
         if ping_role:
             embed.add_field(
                 name="👥 Target Audience",
                 value=ping_role.mention,
                 inline=True
             )
-        
+
         embed.add_field(
             name="🎮 Join the Game",
             value=f"[Monroe Social Club Experience]({Config.ROBLOX_GAME_LINK})",
             inline=False
         )
-        
+
         if notes:
             embed.add_field(
                 name="📝 Additional Notes",
                 value=notes,
                 inline=False
             )
-        
+
         embed.set_footer(text=f"Event organized by {interaction.user.display_name}", icon_url=interaction.user.avatar.url if interaction.user.avatar else interaction.user.default_avatar.url)
         embed.timestamp = discord.utils.utcnow()
 
@@ -619,64 +619,113 @@ class ModerationCog(commands.Cog):
             description="Are you sure you want to clear all application messages? This action cannot be undone.",
             color=Config.COLORS["warning"]
         )
-        
+
         view = ClearApplicationsView()
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    @app_commands.command(name="addrules", description="Post the server rules")
+    @app_commands.command(name="addrules", description="Display server rules")
     async def addrules(self, interaction: discord.Interaction):
-        if not self.has_staff_permissions(interaction.user):
+        """Display comprehensive server rules"""
+        if not any(role.id in Config.STAFF_ROLES for role in interaction.user.roles) and not interaction.user.guild_permissions.manage_messages:
             await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
             return
 
-        # Create rules embed
         embed = discord.Embed(
             title="📋 Monroe Social Club Rules",
-            description="Welcome to our 80s beach paradise! Please follow these rules to maintain a positive community:",
-            color=Config.COLORS["info"]
+            description="Complete list of server rules organized by severity",
+            color=Config.COLORS["info"],
+            timestamp=discord.utils.utcnow()
         )
-        
-        # Group rules by severity
-        severity_1 = []
-        severity_2 = []
-        severity_3 = []
-        
-        for rule_id, rule_desc in Config.SERVER_RULES.items():
-            if rule_id.startswith("1."):
-                severity_1.append(f"**{rule_id}** - {rule_desc}")
-            elif rule_id.startswith("2."):
-                severity_2.append(f"**{rule_id}** - {rule_desc}")
-            elif rule_id.startswith("3."):
-                severity_3.append(f"**{rule_id}** - {rule_desc}")
-        
-        embed.add_field(
-            name="🔴 Severe Violations (Level 1)",
-            value="\n".join(severity_1),
-            inline=False
-        )
-        
-        embed.add_field(
-            name="🟡 Moderate Violations (Level 2)",
-            value="\n".join(severity_2),
-            inline=False
-        )
-        
-        embed.add_field(
-            name="🟠 Minor Violations (Level 3)",
-            value="\n".join(severity_3),
-            inline=False
-        )
-        
-        embed.add_field(
-            name="📌 Important Notes",
-            value="• Violations are categorized by severity\n• Repeated violations may result in escalated punishments\n• Staff decisions are final\n• Appeal process available through DM to management",
-            inline=False
-        )
-        
-        embed.set_footer(text="Monroe Social Club - 80s Beach Paradise 🌴", icon_url=self.bot.user.avatar.url)
-        embed.timestamp = discord.utils.utcnow()
 
-        await interaction.response.send_message(embed=embed)
+        try:
+            # Group rules by severity level
+            severity_1_rules = []
+            severity_2_rules = []
+            severity_3_rules = []
+
+            for rule_id, description in Config.SERVER_RULES.items():
+                if rule_id.startswith("1."):  # Severity 1
+                    severity_1_rules.append(f"**{rule_id}**: {description}")
+                elif rule_id.startswith("2."):  # Severity 2
+                    severity_2_rules.append(f"**{rule_id}**: {description}")
+                elif rule_id.startswith("3."):  # Severity 3
+                    severity_3_rules.append(f"**{rule_id}**: {description}")
+
+            # Add fields for each severity level (split if too long)
+            if severity_1_rules:
+                rules_text = "\n".join(severity_1_rules)
+                if len(rules_text) > 1024:
+                    # Split into multiple fields if too long
+                    mid_point = len(severity_1_rules) // 2
+                    embed.add_field(
+                        name="⚠️ Severity 1 Rules (Part 1)",
+                        value="\n".join(severity_1_rules[:mid_point]),
+                        inline=False
+                    )
+                    embed.add_field(
+                        name="⚠️ Severity 1 Rules (Part 2)",
+                        value="\n".join(severity_1_rules[mid_point:]),
+                        inline=False
+                    )
+                else:
+                    embed.add_field(
+                        name="⚠️ Severity 1 Rules",
+                        value=rules_text,
+                        inline=False
+                    )
+
+            if severity_2_rules:
+                rules_text = "\n".join(severity_2_rules)
+                if len(rules_text) > 1024:
+                    mid_point = len(severity_2_rules) // 2
+                    embed.add_field(
+                        name="⚡ Severity 2 Rules (Part 1)",
+                        value="\n".join(severity_2_rules[:mid_point]),
+                        inline=False
+                    )
+                    embed.add_field(
+                        name="⚡ Severity 2 Rules (Part 2)",
+                        value="\n".join(severity_2_rules[mid_point:]),
+                        inline=False
+                    )
+                else:
+                    embed.add_field(
+                        name="⚡ Severity 2 Rules",
+                        value=rules_text,
+                        inline=False
+                    )
+
+            if severity_3_rules:
+                rules_text = "\n".join(severity_3_rules)
+                if len(rules_text) > 1024:
+                    mid_point = len(severity_3_rules) // 2
+                    embed.add_field(
+                        name="🚨 Severity 3 Rules (Part 1)",
+                        value="\n".join(severity_3_rules[:mid_point]),
+                        inline=False
+                    )
+                    embed.add_field(
+                        name="🚨 Severity 3 Rules (Part 2)",
+                        value="\n".join(severity_3_rules[mid_point:]),
+                        inline=False
+                    )
+                else:
+                    embed.add_field(
+                        name="🚨 Severity 3 Rules",
+                        value=rules_text,
+                        inline=False
+                    )
+
+            embed.set_footer(text="Monroe Social Club • Use rule IDs for moderation actions")
+            await interaction.response.send_message(embed=embed)
+
+        except Exception as e:
+            error_embed = discord.Embed(
+                title="❌ Error Loading Rules",
+                description=f"There was an error loading the server rules: {str(e)}",
+                color=Config.COLORS["error"]
+            )
+            await interaction.response.send_message(embed=error_embed, ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(ModerationCog(bot))
