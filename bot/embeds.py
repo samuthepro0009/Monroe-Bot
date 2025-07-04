@@ -40,7 +40,8 @@ def create_moderation_embed(action, target, staff_member, reason, color=None):
     embed.set_footer(text="Monroe Social Club - Moderation System", icon_url=staff_member.avatar.url if staff_member.avatar else staff_member.default_avatar.url)
     embed.timestamp = discord.utils.utcnow()
     
-    return embed
+    reimport discord
+from bot.config import Config
 
 def create_welcome_embed(member, bot):
     """Create a welcome embed for new members"""
