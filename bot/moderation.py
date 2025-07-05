@@ -59,8 +59,8 @@ class RuleViolationSelect(discord.ui.Select):
                 await interaction.response.send_message("❌ I don't have permission to kick this user.", ephemeral=True)
                 return
 
-        # Create moderation embed
-        embed = create_moderation_embed(
+        # Create moderation embed for logs
+        log_embed = create_moderation_embed(
             action=self.action_type,
             target=self.target,
             staff_member=self.staff_member,
@@ -69,7 +69,7 @@ class RuleViolationSelect(discord.ui.Select):
         )
 
         if self.image:
-            embed.set_image(url=self.image.url)
+            log_embed.set_image(url=self.image.url)
 
         # Log to both moderation log channels
         log_channels = [
@@ -80,9 +80,31 @@ class RuleViolationSelect(discord.ui.Select):
         for log_channel in log_channels:
             if log_channel:
                 try:
-                    await log_channel.send(embed=embed)
+                    await log_channel.send(embed=log_embed)
                 except Exception as e:
                     print(f"Failed to send log to channel {log_channel.id}: {e}")
+
+        # Send public announcement to the first channel for all actions
+        announcement_channel = interaction.client.get_channel(1353388676981456917)
+        if announcement_channel:
+            try:
+                # Create public announcement embed
+                announcement_embed = discord.Embed(
+                    title=f"📋 {self.action_type} Issued",
+                    description=f"{self.target.mention} has been {self.action_type.lower()}ed.",
+                    color=color
+                )
+                announcement_embed.add_field(name="Reason", value=reason, inline=False)
+                announcement_embed.add_field(name="Staff Member", value=self.staff_member.mention, inline=True)
+                announcement_embed.set_footer(text="Monroe Social Club - Moderation System")
+                announcement_embed.timestamp = discord.utils.utcnow()
+
+                if self.image:
+                    announcement_embed.set_image(url=self.image.url)
+
+                await announcement_channel.send(embed=announcement_embed)
+            except Exception as e:
+                print(f"Failed to send announcement to channel {announcement_channel.id}: {e}")
 
         # Send DM to user
         try:
@@ -162,8 +184,8 @@ class CustomReasonModal(discord.ui.Modal):
                 await interaction.response.send_message("❌ I don't have permission to kick this user.", ephemeral=True)
                 return
 
-        # Create moderation embed
-        embed = create_moderation_embed(
+        # Create moderation embed for logs
+        log_embed = create_moderation_embed(
             action=self.action_type,
             target=self.target,
             staff_member=self.staff_member,
@@ -172,7 +194,7 @@ class CustomReasonModal(discord.ui.Modal):
         )
 
         if self.image:
-            embed.set_image(url=self.image.url)
+            log_embed.set_image(url=self.image.url)
 
         # Log to both moderation log channels
         log_channels = [
@@ -183,9 +205,31 @@ class CustomReasonModal(discord.ui.Modal):
         for log_channel in log_channels:
             if log_channel:
                 try:
-                    await log_channel.send(embed=embed)
+                    await log_channel.send(embed=log_embed)
                 except Exception as e:
                     print(f"Failed to send log to channel {log_channel.id}: {e}")
+
+        # Send public announcement to the first channel for all actions
+        announcement_channel = interaction.client.get_channel(1353388676981456917)
+        if announcement_channel:
+            try:
+                # Create public announcement embed
+                announcement_embed = discord.Embed(
+                    title=f"📋 {self.action_type} Issued",
+                    description=f"{self.target.mention} has been {self.action_type.lower()}ed.",
+                    color=color
+                )
+                announcement_embed.add_field(name="Reason", value=reason, inline=False)
+                announcement_embed.add_field(name="Staff Member", value=self.staff_member.mention, inline=True)
+                announcement_embed.set_footer(text="Monroe Social Club - Moderation System")
+                announcement_embed.timestamp = discord.utils.utcnow()
+
+                if self.image:
+                    announcement_embed.set_image(url=self.image.url)
+
+                await announcement_channel.send(embed=announcement_embed)
+            except Exception as e:
+                print(f"Failed to send announcement to channel {announcement_channel.id}: {e}")
 
         # Send DM to user
         try:
@@ -458,6 +502,24 @@ class ModerationCog(commands.Cog):
                     except Exception as e:
                         print(f"Failed to send log to channel {log_channel.id}: {e}")
 
+            # Send public announcement
+            announcement_channel = self.bot.get_channel(1353388676981456917)
+            if announcement_channel:
+                try:
+                    announcement_embed = discord.Embed(
+                        title="📋 Unban Issued",
+                        description=f"{banned_user.mention} has been unbanned.",
+                        color=Config.COLORS["success"]
+                    )
+                    announcement_embed.add_field(name="Reason", value=reason, inline=False)
+                    announcement_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
+                    announcement_embed.set_footer(text="Monroe Social Club - Moderation System")
+                    announcement_embed.timestamp = discord.utils.utcnow()
+
+                    await announcement_channel.send(embed=announcement_embed)
+                except Exception as e:
+                    print(f"Failed to send announcement to channel {announcement_channel.id}: {e}")
+
             await interaction.response.send_message(f"✅ {banned_user.mention} has been unbanned for: {reason}", ephemeral=True)
         except discord.NotFound:
             await interaction.response.send_message("❌ User not found or not banned.", ephemeral=True)
@@ -495,6 +557,24 @@ class ModerationCog(commands.Cog):
                     await log_channel.send(embed=embed)
                 except Exception as e:
                     print(f"Failed to send log to channel {log_channel.id}: {e}")
+
+        # Send public announcement
+        announcement_channel = interaction.client.get_channel(1353388676981456917)
+        if announcement_channel:
+            try:
+                announcement_embed = discord.Embed(
+                    title="📋 Warning Removed",
+                    description=f"A warning has been removed from {member.mention}.",
+                    color=Config.COLORS["success"]
+                )
+                announcement_embed.add_field(name="Reason", value=reason, inline=False)
+                announcement_embed.add_field(name="Staff Member", value=interaction.user.mention, inline=True)
+                announcement_embed.set_footer(text="Monroe Social Club - Moderation System")
+                announcement_embed.timestamp = discord.utils.utcnow()
+
+                await announcement_channel.send(embed=announcement_embed)
+            except Exception as e:
+                print(f"Failed to send announcement to channel {announcement_channel.id}: {e}")
 
         # Send DM to user
         try:
