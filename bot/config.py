@@ -5,42 +5,42 @@ class Config:
     # =============================================================================
     # BOT CORE CONFIGURATION
     # =============================================================================
-    
+
     # Discord Bot Token (stored as environment variable for security)
     BOT_TOKEN = os.getenv("DISCORD_TOKEN")
-    
+
     # Bot activity and status settings
     BOT_STATUS = discord.Status.online
     BOT_ACTIVITY_TYPE = discord.ActivityType.watching
     BOT_ACTIVITY_NAME = "Monroe Social Club 🌴"
-    
+
     # Bot command prefix (for legacy commands if needed)
     BOT_PREFIX = "!"
-    
+
     # =============================================================================
     # SERVER & CHANNEL CONFIGURATION
     # =============================================================================
-    
+
     # Channel IDs
     MODERATION_LOG_CHANNEL = 1353388424295350283  # Replace with actual channel ID
     AUTOMOD_LOG_CHANNEL = 1353388424295350283     # Replace with actual channel ID
     ANNOUNCEMENT_CHANNEL = 1353388424295350283    # Replace with actual channel ID
     APPLICATION_LOG_CHANNEL = 1353388424295350283  # Replace with actual channel ID
     DEVLOG_CHANNEL = 1353388424295350283          # Replace with actual channel ID
-    
+
     # Public Channels
     ANNOUNCEMENT_CHANNEL = 1353388424295350283
     DEVLOG_CHANNEL = 1353388489915502737
     WELCOME_CHANNEL_ID = 1353409299636031610
     QOTD_CHAT_REVIVE_CHANNEL = 1353301751050014824
-    
+
     # Broadcast channels for dashboard announcements
     BROADCAST_CHANNELS = [1353388424295350283, 1353388489915502737]
-    
+
     # =============================================================================
     # STAFF & ROLE CONFIGURATION
     # =============================================================================
-    
+
     # Management team configuration
     MANAGEMENT_ROLES = {
         "Chairman": "Samu",
@@ -48,7 +48,7 @@ class Config:
         "President": "Fra",
         "Vice President": "Rev"
     }
-    
+
     # Role IDs
     STAFF_ROLES = [
         1353388424295350283,  # Replace with actual staff role IDs
@@ -56,41 +56,41 @@ class Config:
     ]
     SECURITY_ROLES = []  # Add actual security role IDs here
     ADMIN_ROLES = []  # Add actual admin role IDs here
-    
+
     # =============================================================================
     # ROBLOX INTEGRATION CONFIGURATION
     # =============================================================================
-    
+
     # Roblox Group and Game Settings
     ROBLOX_GROUP_ID = 35828136
     ROBLOX_MAP_ID = 80340506584377
     ROBLOX_GAME_LINK = "https://www.roblox.com/games/your-game-id"
     ROVER_API_BASE = "https://registry.rover.link/api"
-    
+
     # =============================================================================
     # MODERATION CONFIGURATION
     # =============================================================================
-    
+
     # Auto-moderation settings
     AUTOMOD_ENABLED = True
     SPAM_DETECTION_ENABLED = True
     CAPS_DETECTION_ENABLED = True
     LINK_DETECTION_ENABLED = True
-    
+
     # Spam detection thresholds
     SPAM_MESSAGE_COUNT = 5
     SPAM_TIME_WINDOW = 10  # seconds
     SPAM_PUNISHMENT_DURATION = 300  # 5 minutes timeout
-    
+
     # Caps detection settings
     CAPS_THRESHOLD = 0.7  # 70% caps
     CAPS_MIN_LENGTH = 10  # minimum message length to check
-    
+
     # Suspicious activity detection
     SUSPICIOUS_ACTIVITY_ENABLED = True
     RAID_DETECTION_THRESHOLD = 5  # users joining within time window
     RAID_DETECTION_TIME_WINDOW = 30  # seconds
-    
+
     # Server Rules
     SERVER_RULES = {
         "1.1": "No Spamming - Avoid sending repetitive messages or excessive content",
@@ -109,11 +109,11 @@ class Config:
         "3.4": "No Alt Accounts - Using alternate accounts to bypass punishments is forbidden",
         "3.5": "Follow Discord ToS - All Discord Terms of Service apply"
     }
-    
+
     # =============================================================================
     # CONTENT & ENGAGEMENT CONFIGURATION
     # =============================================================================
-    
+
     # Question of the Day (QOTD) system
     QOTD_ENABLED = True
     QOTD_QUESTIONS = [
@@ -133,7 +133,7 @@ class Config:
         "If you could bring back one 80s trend, what would it be?",
         "What's your favorite 80s cartoon character?"
     ]
-    
+
     # Chat revival messages
     CHAT_REVIVE_ENABLED = True
     CHAT_REVIVE_MESSAGES = [
@@ -153,11 +153,11 @@ class Config:
         "🎯 Goal setting! What's one thing you want to accomplish this week?",
         "🎊 Celebration time! What's something you're proud of lately?"
     ]
-    
+
     # =============================================================================
     # ANNOUNCEMENT TEMPLATES CONFIGURATION
     # =============================================================================
-    
+
     # Available announcement templates
     ANNOUNCEMENT_TEMPLATES = {
         "event": {
@@ -201,11 +201,11 @@ class Config:
             "emoji": "🎁"
         }
     }
-    
+
     # =============================================================================
     # ASCII ART CONFIGURATION
     # =============================================================================
-    
+
     # ASCII Art collection for commands
     ASCII_ART = {
         "waves": """
@@ -263,16 +263,16 @@ class Config:
     Monroe Social Club
         """
     }
-    
+
     # =============================================================================
     # ACTIVITY LEADERBOARD CONFIGURATION
     # =============================================================================
-    
+
     # Activity tracking settings
     LEADERBOARD_ENABLED = True
     LEADERBOARD_RESET_WEEKLY = True
     LEADERBOARD_MAX_ENTRIES = 10
-    
+
     # Point values for different activities
     ACTIVITY_POINTS = {
         "message": 1,
@@ -283,27 +283,27 @@ class Config:
         "thread_created": 5,
         "event_participation": 10
     }
-    
+
     # =============================================================================
     # API & WEB SERVER CONFIGURATION
     # =============================================================================
-    
+
     # Web server settings
     API_ENABLED = True
     API_PORT = int(os.getenv('PORT', 8000))
     API_HOST = "0.0.0.0"
-    
+
     # Dashboard authentication
     DASHBOARD_SECRET_KEY = os.getenv("DASHBOARD_SECRET", "monroe-secret-key-2024")
-    
+
     # Health check settings
     HEALTH_CHECK_ENABLED = True
     HEALTH_CHECK_PATH = "/health"
-    
+
     # =============================================================================
     # VISUAL & THEME CONFIGURATION
     # =============================================================================
-    
+
     # Colors
     COLORS = {
         "success": 0x00ff00,
@@ -313,7 +313,7 @@ class Config:
         "purple": 0x7c3aed,
         "pink": 0xff69b4
     }
-    
+
     # Admin logging colors by action type
     LOG_COLORS = {
         "member_join": 0x00FF00,      # Green - positive action
@@ -330,48 +330,48 @@ class Config:
         "nickname_change": 0xDDA0DD,  # Plum - profile changes
         "message_edit": 0xFFD700      # Gold - message modifications
     }
-    
+
     # =============================================================================
     # HOSTING & DEPLOYMENT CONFIGURATION
     # =============================================================================
-    
+
     # Hosting platform information
     HOSTING_PLATFORM = "Replit"
     HOSTING_URL = "https://replit.com"
     BOT_VERSION = "2.0.0"
     BOT_UPTIME_24_7 = True
-    
+
     # =============================================================================
     # DEBUG & DEVELOPMENT CONFIGURATION
     # =============================================================================
-    
+
     # Debug settings
     DEBUG_MODE = os.getenv("DEBUG", "False").lower() == "true"
     VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", "False").lower() == "true"
-    
+
     # Development features
     DEV_GUILD_ID = None  # Set to guild ID for faster command sync during development
-    
+
     # =============================================================================
     # SAFETY & SECURITY CONFIGURATION
     # =============================================================================
-    
+
     # Rate limiting
     RATE_LIMIT_ENABLED = True
     RATE_LIMIT_COMMANDS_PER_MINUTE = 30
-    
+
     # Content filtering
     CONTENT_FILTER_ENABLED = True
     NSFW_DETECTION_ENABLED = True
-    
+
     # Backup and recovery
     AUTO_BACKUP_ENABLED = False  # Set to True if you want automatic backups
     BACKUP_FREQUENCY_HOURS = 24
-    
+
     # =============================================================================
     # FEATURE FLAGS
     # =============================================================================
-    
+
     # Enable/disable major features
     FEATURES = {
         "moderation": True,
