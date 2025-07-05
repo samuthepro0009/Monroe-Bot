@@ -33,6 +33,7 @@ async def load_cogs():
         'bot.announcement_templates',
         'bot.ascii_art',
         'bot.activity_leaderboard',
+        'bot.applications',
         'bot.keep_alive'
     ]
 
